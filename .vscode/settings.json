@@ -1,0 +1,11 @@
+{
+  "Lua.diagnostics.disable": [
+    "lowercase-global",
+  ],
+  "Lua.workspace.ignoreDir": [
+    ".vscode",
+  ],
+  "Lua.diagnostics.neededFileStatus": {
+    "no-implicit-any": "Any",
+  },
+}
