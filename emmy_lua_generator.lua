@@ -1,4 +1,4 @@
-
+---@meta
 local file = require("file")
 
 ---@param description string
@@ -9,6 +9,14 @@ local function convert_description(description)
   else
     return "---"..description:gsub("\n", "\n---\n---").."\n"
   end
+end
+
+---convert a string to a valid lua identifier
+---@param str string
+---@return string
+local function to_id(str)
+  str = str:gsub("[^a-zA-Z0-9_]", "_")
+  return str:find("^[0-9]") and "_"..str or str
 end
 
 ---@param data ApiFormat
@@ -25,14 +33,14 @@ local function generate_defines(data)
   ---@param name_prefix string
   local function add_define(define, name_prefix)
     add(convert_description(define.description))
-    add("---@class "..name_prefix..define.name.."\n"..define.name.."={\n")
+    add("---@class "..name_prefix..define.name.."\n"..to_id(define.name).."={\n")
     name_prefix = name_prefix..define.name.."."
     for _, subkey in ipairs(define.subkeys) do
       add_define(subkey, name_prefix)
     end
     for _, value in ipairs(define.values) do
       add(convert_description(value.description))
-      add(value.name.."=0,\n")
+      add(to_id(value.name).."=0,\n")
     end
     add("},\n")
   end
