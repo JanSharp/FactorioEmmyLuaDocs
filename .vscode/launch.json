@@ -8,7 +8,7 @@
         "file": "main.lua",
       },
       "args": [
-        "--source-file", "api.json",
+        "--source-file", "source_data/api.json",
         "--cache-dir", "cache",
         "--target-dir", "build",
       ],
