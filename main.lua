@@ -67,6 +67,7 @@ local source
 ---@type Path
 local api_cache_path = args.cache_dir_path / "api_cache.dat"
 if api_cache_path:exists() then
+  -- TODO: add cache validity/up to date check
   ---@type table
   source = loadfile(api_cache_path:str(), "t")()
 else
