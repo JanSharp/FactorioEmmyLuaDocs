@@ -1,3 +1,4 @@
+---@meta
 
 ---@class ApiFormat
 ---@field application "factorio"
