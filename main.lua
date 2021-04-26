@@ -61,20 +61,18 @@ end
 
 local args = args_service.get_args(arg)
 
----@type table
+---@type ApiFormat
 local source
 
 ---@type Path
 local api_cache_path = args.cache_dir_path / "api_cache.dat"
 if api_cache_path:exists() then
   -- TODO: add cache validity/up to date check
-  ---@type table
+  ---@type ApiFormat
   source = loadfile(api_cache_path:str(), "t")()
 else
   if not args.source_path:exists() then return end
-  ---@type table
+  ---@type ApiFormat
   source = json.decode(read_all_text(args.source_path):gsub("<br/>", "\\n"))
   write_all_text(api_cache_path, serpent.dump(source))
 end
-
-local breakpoint
