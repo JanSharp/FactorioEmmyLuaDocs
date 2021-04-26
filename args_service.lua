@@ -6,6 +6,7 @@ local Path = require("path")
 ---@field source_path Path
 ---@field cache_dir_path Path
 ---@field target_dir_path Path
+---@field debug_api_json_crc number|nil
 
 ---@param arg string[]
 ---@return Args
@@ -44,6 +45,7 @@ local function get_args(arg)
 
   ---@param group_name string
   local function single(group_name)
+    if not args[group_name] then return end
     assert(#args[group_name] == 1, "Program args group '--"
       ..get_original_group_name(group_name).."' must contain one single value."
     )
@@ -73,6 +75,7 @@ local function get_args(arg)
   single("source_file")
   single("cache_dir")
   single("target_dir")
+  single("debug_api_json_crc")
 
   args.source_path = Path.new(args.source_file)
   args.source_file = nil
@@ -80,6 +83,7 @@ local function get_args(arg)
   args.cache_dir = nil
   args.target_dir_path = Path.new(args.target_dir)
   args.target_dir = nil
+  args.debug_api_json_crc = args.debug_api_json_crc and tonumber(args.debug_api_json_crc)
 
   return args
 end
