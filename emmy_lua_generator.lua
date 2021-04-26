@@ -1,4 +1,4 @@
----@meta
+
 local file = require("file")
 local serpent = require("serpent")
 
