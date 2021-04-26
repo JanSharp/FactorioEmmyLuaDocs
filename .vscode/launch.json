@@ -8,7 +8,8 @@
         "file": "main.lua",
       },
       "args": [
-        "--source-dir", "C:/Dev/.ClonedRepositories/FactorioApiScraper",
+        "--source-file", "api.json",
+        "--cache-dir", "cache",
         "--target-dir", "build",
       ],
     },

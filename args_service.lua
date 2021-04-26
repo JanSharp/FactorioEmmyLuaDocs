@@ -3,7 +3,8 @@ local args_util = require("args_util")
 local Path = require("path")
 
 ---@class Args
----@field source_dir_path Path
+---@field source_path Path
+---@field cache_dir_path Path
 ---@field target_dir_path Path
 
 ---@param arg string[]
@@ -65,14 +66,18 @@ local function get_args(arg)
 
   rename_groups()
 
-  assert_group("source_dir")
+  assert_group("source_file")
+  assert_group("cache_dir")
   assert_group("target_dir")
 
-  single("source_dir")
+  single("source_file")
+  single("cache_dir")
   single("target_dir")
 
-  args.source_dir_path = Path.new(args.source_dir)
-  args.source_dir = nil
+  args.source_path = Path.new(args.source_file)
+  args.source_file = nil
+  args.cache_dir_path = Path.new(args.cache_dir)
+  args.cache_dir = nil
   args.target_dir_path = Path.new(args.target_dir)
   args.target_dir = nil
 
