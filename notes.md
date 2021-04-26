@@ -59,4 +59,5 @@ be nice but probably not the best approach. Not sure
 
 ApiEvent has subclasses and see_also but nothing is using it
 
-
+LuaLazyLoadedValue doesn't say anything about it's generic-ness and it's referred to as just LazyLoadedValue.
+This is a tricky situation
