@@ -1,4 +1,6 @@
 
+---@diagnostic disable: no-implicit-any
+
 -- taken from https://gist.github.com/SafeteeWoW/080e784e5ebfda42cad486c58e6d26e4
 
 local string_byte = string.byte
