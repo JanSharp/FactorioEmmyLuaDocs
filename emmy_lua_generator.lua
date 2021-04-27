@@ -522,6 +522,25 @@ local function generate_custom()
 ]])
 end
 
+local function generate_globals()
+  write_file_to_target("globals.lua", file_prefix..[[
+---@type LuaGameScript
+game = {}
+---@type LuaBootstrap
+script = {}
+---@type LuaRemote
+remote = {}
+---@type LuaCommandProcessor
+commands = {}
+---@type LuaSettings
+settings = {}
+---@type LuaRCON
+rcon = {}
+---@type LuaRendering
+rendering = {}
+]])
+end
+
 ---@param _args Args
 ---@param _data ApiFormat
 local function generate(_args, _data)
@@ -534,6 +553,7 @@ local function generate(_args, _data)
   generate_classes()
   generate_concepts()
   generate_custom()
+  generate_globals()
   delete_invalid_files_from_target()
   args = nil
   data = nil

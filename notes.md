@@ -107,3 +107,5 @@ though it may just be `blueprint entity` and `blueprint tile`
 The single use throw away types need to be extracted. Them being part of the description is, well, not great
 
 create_entity has poor examples in terms of code practice, see `game.forces.player`.
+
+The list of the global variables and their types probably makes sense to be in the json. like `script`, `game`, and so on.
