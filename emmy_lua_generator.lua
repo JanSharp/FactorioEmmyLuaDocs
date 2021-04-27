@@ -137,26 +137,27 @@ local function generate_defines()
     c = c + 1
     result[c] = part
   end
-  add(file_prefix.."---@class defines\ndefines={\n")
+  add(file_prefix.."---@class defines\ndefines={}\n")
   ---@param define ApiDefine
   ---@param name_prefix string
   local function add_define(define, name_prefix)
+    -- every define name and value name is expected to be a valid identifier
+    local name = name_prefix..define.name
     add(convert_description(define.description)
-      .."---@class "..name_prefix..define.name.."\n"..to_id(define.name).."={\n")
-    name_prefix = name_prefix..define.name.."."
-    for _, subkey in ipairs(define.subkeys) do
-      add_define(subkey, name_prefix)
-    end
+      .."---@class "..name.."\n"..name.."={\n")
+    name_prefix = name.."."
     for _, value in ipairs(define.values) do
       add(convert_description(value.description)
         ..to_id(value.name).."=0,\n")
     end
-    add("},\n")
+    add("}\n")
+    for _, subkey in ipairs(define.subkeys) do
+      add_define(subkey, name_prefix)
+    end
   end
   for _, define in ipairs(data.defines) do
     add_define(define, "defines.")
   end
-  add("}")
   write_file_to_target("defines.lua", table.concat(result))
 end
 
