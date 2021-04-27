@@ -240,7 +240,7 @@ local function generate_classes()
             ..convert_description(method.return_desription)) -- TODO: potentially missing or single line descriptions
         end
         add(method.name.."=function("
-          .. table.concat(linq.select(method.parameters, function(v) return to_id(v.name) end), ",")
+          ..table.concat(linq.select(method.parameters, function(v) return to_id(v.name) end), ",")
           ..")end,\n")
       end
     end
