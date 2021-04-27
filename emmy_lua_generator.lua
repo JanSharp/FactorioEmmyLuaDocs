@@ -208,7 +208,8 @@ local function generate_classes()
       if attribute.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..attribute.name)
       else
-        add(convert_description("["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]\n"..attribute.description)
+        add(convert_description("["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
+          ..(attribute.description and attribute.description ~= "" and "\n"..attribute.description or "")) -- TODO: code duplication
           .."---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
         -- TODO: see_also and subclasses
       end
