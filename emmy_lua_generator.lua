@@ -181,16 +181,8 @@ local function generate_events()
   write_file_to_target("events.lua", table.concat(result))
 end
 
----main description
----@param base_classes?string[]@
----base_classes description
----
----foo
----@return string@
----
----hello world
----
----more text
+---@param base_classes string[]
+---@return string
 local function convert_base_classes(base_classes)
   if base_classes[1] then
     return ":"..table.concat(base_classes, ",")
@@ -226,9 +218,33 @@ local function generate_classes()
     for _, method in ipairs(class.methods) do
       if method.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..method.name)
-      elseif method.takes_table then -- TODO: takes_table methods
-        -- print(class.name.."::"..method.name.." takes a table.")
-      else
+      elseif method.takes_table then -- method that takes a table
+        local arg_class_name = class.name.."."..method.name..".arg"
+        -- there is no good place for method.variant_parameter_description sadly
+        add("---@class "..arg_class_name.."\n")
+        for _, parameter in ipairs(method.parameters) do
+          add(convert_description(parameter.description)
+            .."---@field "..parameter.name.." "..convert_type(parameter.type)
+            ..(parameter.optional and "|nil" or "").."\n")
+        end
+        for _, group in ipairs(method.variant_parameter_groups) do
+          for _, parameter in ipairs(group.parameters) do
+            add(convert_description("Applies to **"..group.name.."**."
+              ..(parameter.description and parameter.description ~= "" and "\n"..parameter.description or ""))
+              .."---@field "..parameter.name.." "..convert_type(parameter.type)
+              ..(parameter.optional and "|nil" or "").."\n")
+          end
+        end
+        -- TODO: see_also and subclasses
+        add("\n" -- blank line needed to break apart the description for the class fields and the method
+          ..convert_description(method.description)
+          .."---@param arg "..arg_class_name.."\n")
+        if method.return_type then
+          add("---@return "..convert_type(method.return_type).."@\n"
+            ..convert_description(method.return_description)) -- TODO: potentially missing or single line descriptions
+        end
+        add(method.name.."=function(arg)end,\n")
+      else -- regular method
         add(convert_description(method.description))
         -- TODO: see_also and subclasses
         for _, parameter in ipairs(method.parameters) do
@@ -237,7 +253,7 @@ local function generate_classes()
         end
         if method.return_type then
           add("---@return "..convert_type(method.return_type).."@\n"
-            ..convert_description(method.return_desription)) -- TODO: potentially missing or single line descriptions
+            ..convert_description(method.return_description)) -- TODO: potentially missing or single line descriptions
         end
         add(method.name.."=function("
           ..table.concat(linq.select(method.parameters, function(v) return to_id(v.name) end), ",")

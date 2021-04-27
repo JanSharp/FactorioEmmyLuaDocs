@@ -41,7 +41,7 @@
 ---@field variant_parameter_groups ApiVariantParameterGroup[] @ type specific parameters
 ---@field variant_parameter_description string|nil
 ---@field return_type ApiType|nil
----@field return_desription string|nil
+---@field return_description string|nil
 
 ---@class ApiParameter : ApiName
 ---@field type ApiType
