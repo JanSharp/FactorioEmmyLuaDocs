@@ -214,7 +214,7 @@ local function generate_classes()
     -- TODO: see_also and subclasses
     for _, attribute in ipairs(class.attributes) do
       if attribute.name:find("^operator") then -- TODO: operators
-        print(class.name.."::"..attribute.name)
+        -- print(class.name.."::"..attribute.name)
       else
         add("---["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]\n---\n"
           ..convert_description(attribute.description)
@@ -225,8 +225,8 @@ local function generate_classes()
     add("---@diagnostic disable-next-line: unused-local\nlocal "..to_id(class.name).."={\n")
     for _, method in ipairs(class.methods) do
       if method.name:find("^operator") then -- TODO: operators
-        print(class.name.."::"..method.name)
-      elseif method.takes_table then
+        -- print(class.name.."::"..method.name)
+      elseif method.takes_table then -- TODO: takes_table methods
         -- print(class.name.."::"..method.name.." takes a table.")
       else
         add(convert_description(method.description))
