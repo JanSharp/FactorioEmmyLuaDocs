@@ -225,18 +225,18 @@ local function generate_classes()
         add("---@class "..arg_class_name.."\n")
         -- TODO: remove the insane amount of code duplication here
         ---@type table<string, ApiParameter>
-        local variant_parameter_map = {}
+        local parameter_map = {}
         ---@type ApiParameter[]
-        local all_variant_parameters = {}
+        local all_parameters = {}
         for _, parameter in ipairs(method.parameters) do
           parameter = linq.copy(parameter)
           parameter.description = convert_description(parameter.description)
-          variant_parameter_map[parameter.name] = parameter
-          all_variant_parameters[#all_variant_parameters+1] = parameter
+          parameter_map[parameter.name] = parameter
+          all_parameters[#all_parameters+1] = parameter
         end
         for _, group in ipairs(method.variant_parameter_groups) do
           for _, group_parameter in ipairs(group.parameters) do
-            local parameter = variant_parameter_map[group_parameter.name]
+            local parameter = parameter_map[group_parameter.name]
             if parameter then
               parameter.description = parameter.description.."---\n"
                 ..convert_description("Applies to **"..group.name.."**: "
@@ -247,12 +247,12 @@ local function generate_classes()
               parameter.description = convert_description("Applies to **"..group.name.."**: "
                 ..(group_parameter.optional and "(optional)" or "(required)")
                 ..(parameter.description and parameter.description ~= "" and "\n"..parameter.description or ""))
-              variant_parameter_map[group_parameter.name] = parameter
-              all_variant_parameters[#all_variant_parameters+1] = parameter
+              parameter_map[group_parameter.name] = parameter
+              all_parameters[#all_parameters+1] = parameter
             end
           end
         end
-        for _, parameter in ipairs(all_variant_parameters) do
+        for _, parameter in ipairs(all_parameters) do
           add(parameter.description
             .."---@field "..parameter.name.." "..convert_type(parameter.type)
             ..(parameter.optional and "|nil" or "").."\n")
