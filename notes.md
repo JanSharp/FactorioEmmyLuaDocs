@@ -61,3 +61,17 @@ ApiEvent has subclasses and see_also but nothing is using it
 
 LuaLazyLoadedValue doesn't say anything about it's generic-ness and it's referred to as just LazyLoadedValue.
 This is a tricky situation
+
+operators should most probably be defined differently
+
+not all function types are defined as ApiComplexTypes while others are
+```json
+"type": "function"
+```
+vs
+```json
+"type": {
+  "type": "function",
+  "parameters": []
+}
+```

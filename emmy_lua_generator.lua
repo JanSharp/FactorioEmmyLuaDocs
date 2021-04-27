@@ -34,6 +34,8 @@ local function delete_invalid_files_from_target()
   end
 end
 
+local file_prefix = "---@meta\n---@diagnostic disable: no-implicit-any\n"
+
 ---@param description string|nil
 ---@return string
 local function convert_description(description)
@@ -44,22 +46,55 @@ local function convert_description(description)
   end
 end
 
+---@type string[]
+local keywords = {
+  "and",
+  "break",
+  "do",
+  "else",
+  "elseif",
+  "end",
+  "false",
+  "for",
+  "function",
+  "goto",
+  "if",
+  "in",
+  "local",
+  "nil",
+  "not",
+  "or",
+  "repeat",
+  "return",
+  "then",
+  "true",
+  "until",
+  "while",
+}
+---@type table<string, string>
+local keyword_map = {}
+for _, keyword in ipairs(keywords) do
+  keyword_map[keyword] = keyword.."_"
+end
+
 ---convert a string to a valid lua identifier
 ---@param str string
 ---@return string
 local function to_id(str)
   str = str:gsub("[^a-zA-Z0-9_]", "_")
-  return str:find("^[0-9]") and "_"..str or str
+  str = str:find("^[0-9]") and "_"..str or str
+  local escaped_keyword = keyword_map[str]
+  return escaped_keyword and escaped_keyword or str
 end
 
 ---@param api_type ApiType
 local function convert_type(api_type)
   if not api_type then
-    print("Attempting to convert type where `api_type` is nil.")
-    return "unknown"
+    -- print("Attempting to convert type where `api_type` is nil.")
+    return "any"
   end
   if type(api_type) == "string" then
-    return api_type
+    return api_type == "function" and "fun()" or api_type
   else
     ---@type ApiComplexType
     local complex_type = api_type
@@ -77,6 +112,14 @@ local function convert_type(api_type)
     elseif complex_type.type == "LazyLoadedValue" then
       -- EmmyLua/sumneko.lua do not support generic type classes
       return "LuaLazyLoadedValue<"..convert_type(complex_type.value)..",nil>"
+    elseif complex_type.type == "CustomDictionary" then
+      return "LuaCustomTable<"..convert_type(complex_type.key)
+        ..","..convert_type(complex_type.value)..">"
+    elseif complex_type.type == "CustomArray" then
+      return "LuaCustomTable<integer,"..convert_type(complex_type.value)..">"
+    elseif complex_type.type == "function" then
+      ---@param v string
+      return "fun("..table.concat(linq.select(complex_type.parameters, function(v) return to_id(v)..":"..to_id(v) end), ",")..")"
     else
       print("Unable to convert complex type `"..complex_type.type.."` "..serpent.line(complex_type, {comment = false})..".")
       return complex_type.type
@@ -92,7 +135,7 @@ local function generate_defines()
     c = c + 1
     result[c] = part
   end
-  add("---@meta\n---@class defines\ndefines={\n")
+  add(file_prefix.."---@class defines\ndefines={\n")
   ---@param define ApiDefine
   ---@param name_prefix string
   local function add_define(define, name_prefix)
@@ -123,7 +166,7 @@ local function generate_events()
     c = c + 1
     result[c] = part
   end
-  add("---@meta\n")
+  add(file_prefix)
   for _, event in ipairs(data.events) do
     add(convert_description(event.description)
       .."---@class "..event.name.."\n")
@@ -163,19 +206,25 @@ local function generate_classes()
       c = c + 1
       result[c] = part
     end
-    add("---@meta\n"
+    add(file_prefix
       ..convert_description(class.description)
       .."---@class "..class.name..convert_base_classes(class.base_classes).."\n")
     -- TODO: see_also and subclasses
     for _, attribute in ipairs(class.attributes) do
-      add("---["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]\n---\n"
-        ..convert_description(attribute.description)
-        .."---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
-      -- TODO: see_also and subclasses
+      if attribute.name:find("^operator") then -- TODO: operators
+        print(class.name.."::"..attribute.name)
+      else
+        add("---["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]\n---\n"
+          ..convert_description(attribute.description)
+          .."---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
+        -- TODO: see_also and subclasses
+      end
     end
     add("---@diagnostic disable-next-line: unused-local\nlocal "..to_id(class.name).."={\n")
     for _, method in ipairs(class.methods) do
-      if method.takes_table then
+      if method.name:find("^operator") then -- TODO: operators
+        print(class.name.."::"..method.name)
+      elseif method.takes_table then
         -- print(class.name.."::"..method.name.." takes a table.")
       else
         add(convert_description(method.description))
@@ -199,8 +248,7 @@ local function generate_classes()
 end
 
 local function generate_basics()
-  write_file_to_target("basic.lua", [[
----@meta
+  write_file_to_target("basic.lua", file_prefix..[[
 ---@class float : number
 ---@class double : number
 ---@class int : number

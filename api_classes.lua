@@ -15,10 +15,11 @@
 ---@alias ApiType ApiBasicType|ApiComplexType
 ---@alias ApiBasicType string
 ---@class ApiComplexType
----@field type "array"|"dictionary"|"variant"|string
----@field key ApiType|nil @ used for "dictionary" and other
----@field value ApiType|nil @ used for "array"|"dictionary" and other
----@field options ApiType[] @ used for "variant"
+---@field type "array"|"dictionary"|"variant"|"CustomArray"|"CustomDictionary"|"function"|string
+---@field key ApiType|nil @ used for "dictionary"|"CustomDictionary" and other
+---@field value ApiType|nil @ used for "array"|"dictionary"|"CustomArray"|"CustomDictionary" and other
+---@field options ApiType[]|nil @ used for "variant"
+---@field parameters string[]|nil @ used for "function"
 
 ---@class ApiSubSeeAlso
 ---@field subclasses string[]|nil @ which subclasses this can be used on
