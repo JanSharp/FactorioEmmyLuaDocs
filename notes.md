@@ -75,3 +75,8 @@ vs
   "parameters": []
 }
 ```
+
+LuaControl::get_blueprint_entities return type has a space in it
+
+-- TODO: check how many types have spaces in them
+though it may just be `blueprint entity` and `blueprint tile`

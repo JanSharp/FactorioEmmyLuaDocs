@@ -94,35 +94,37 @@ local function convert_type(api_type)
     return "any"
   end
   if type(api_type) == "string" then
-    return api_type == "function" and "fun()" or api_type
+    ---@type string
+    api_type = api_type
+    return api_type == "function" and "fun()" or api_type:gsub(" ", "-")
   else
     ---@type ApiComplexType
-    local complex_type = api_type
-    if complex_type.type == "array" then
-      return convert_type(complex_type.value).."[]"
-    elseif complex_type.type == "dictionary" then
-      return "table<"..convert_type(complex_type.key)
-        ..","..convert_type(complex_type.value)..">"
-    elseif complex_type.type == "variant" then
+    api_type = api_type
+    if api_type.type == "array" then
+      return convert_type(api_type.value).."[]"
+    elseif api_type.type == "dictionary" then
+      return "table<"..convert_type(api_type.key)
+        ..","..convert_type(api_type.value)..">"
+    elseif api_type.type == "variant" then
       local converted_options = {}
-      for i, option in ipairs(complex_type.options) do
+      for i, option in ipairs(api_type.options) do
         converted_options[i] = convert_type(option)
       end
       return table.concat(converted_options, "|")
-    elseif complex_type.type == "LazyLoadedValue" then
+    elseif api_type.type == "LazyLoadedValue" then
       -- EmmyLua/sumneko.lua do not support generic type classes
-      return "LuaLazyLoadedValue<"..convert_type(complex_type.value)..",nil>"
-    elseif complex_type.type == "CustomDictionary" then
-      return "LuaCustomTable<"..convert_type(complex_type.key)
-        ..","..convert_type(complex_type.value)..">"
-    elseif complex_type.type == "CustomArray" then
-      return "LuaCustomTable<integer,"..convert_type(complex_type.value)..">"
-    elseif complex_type.type == "function" then
+      return "LuaLazyLoadedValue<"..convert_type(api_type.value)..",nil>"
+    elseif api_type.type == "CustomDictionary" then
+      return "LuaCustomTable<"..convert_type(api_type.key)
+        ..","..convert_type(api_type.value)..">"
+    elseif api_type.type == "CustomArray" then
+      return "LuaCustomTable<integer,"..convert_type(api_type.value)..">"
+    elseif api_type.type == "function" then
       ---@param v string
-      return "fun("..table.concat(linq.select(complex_type.parameters, function(v) return to_id(v)..":"..to_id(v) end), ",")..")"
+      return "fun("..table.concat(linq.select(api_type.parameters, function(v) return to_id(v)..":"..to_id(v) end), ",")..")"
     else
-      print("Unable to convert complex type `"..complex_type.type.."` "..serpent.line(complex_type, {comment = false})..".")
-      return complex_type.type
+      print("Unable to convert complex type `"..api_type.type.."` "..serpent.line(api_type, {comment = false})..".")
+      return api_type.type
     end
   end
 end
@@ -260,6 +262,148 @@ local function generate_basics()
 ]])
 end
 
+local function generate_concepts()
+  write_file_to_target("concepts.lua", file_prefix..[[
+---@class LocalisedString
+---@class DisplayResolution
+---@class PersonalLogisticParameters
+---@class Position
+---@class ChunkPosition
+---@class TilePosition
+---@class ChunkPositionAndArea
+---@class GuiLocation
+---@class GuiAnchor
+---@class OldTileAndPosition
+---@class Tags
+---@class SmokeSource
+---@class Vector
+---@class BoundingBox
+---@class ScriptArea
+---@class ScriptPosition
+---@class Color
+---@class ColorModifier
+---@class PathFindFlags
+---@class MapViewSettings
+---@class MapSettings
+---@class DifficultySettings
+---@class MapExchangeStringData
+---@class Fluid
+---@class Ingredient
+---@class Product
+---@class Loot
+---@class Modifier
+---@class Offer
+---@class AutoplaceSpecification
+---@class NoiseExpression
+---@class Resistances
+---@class MapGenSize
+---@class AutoplaceSettings
+---@class CliffPlacementSettings
+---@class MapGenSettings
+---@class SignalID
+---@class Signal
+---@class UpgradeFilter
+---@class InfinityInventoryFilter
+---@class InfinityPipeFilter
+---@class HeatSetting
+---@class FluidBoxConnection
+---@class ArithmeticCombinatorParameters
+---@class ConstantCombinatorParameters
+---@class ComparatorString
+---@class DeciderCombinatorParameters
+---@class CircuitCondition
+---@class CircuitConditionSpecification
+---@class Filter
+---@class PlaceAsTileResult
+---@class RaiseEventParameters
+---@class SimpleItemStack
+---@class Command
+---@class PathfindFlags
+---@class FluidSpecification
+---@class ForceSpecification
+---@class TechnologySpecification
+---@class SurfaceSpecification
+---@class PlayerSpecification
+---@class ItemStackSpecification
+---@class EntityPrototypeSpecification
+---@class ItemPrototypeSpecification
+---@class WaitCondition
+---@class TrainScheduleRecord
+---@class TrainSchedule
+---@class GuiArrowSpecification
+---@class AmmoType
+---@class BeamTarget
+---@class RidingState
+---@class SpritePath
+---@class SoundPath
+---@class ModConfigurationChangedData
+---@class ConfigurationChangedData
+---@class EffectValue
+---@class Effects
+---@class EntityPrototypeFlags
+---@class ItemPrototypeFlags
+---@class CollisionMaskLayer
+---@class CollisionMask
+---@class CollisionMaskWithFlags
+---@class TriggerTargetMask
+---@class TriggerEffectItem
+---@class TriggerDelivery
+---@class TriggerItem
+---@class Trigger
+---@class AttackParameters
+---@class CapsuleAction
+---@class SelectionModeFlags
+---@class LogisticFilter
+---@class ModSetting
+---@class Any
+---@class ProgrammableSpeakerParameters
+---@class ProgrammableSpeakerAlertParameters
+---@class ProgrammableSpeakerCircuitParameters
+---@class ProgrammableSpeakerInstrument
+---@class Alignment
+---@class NthTickEvent
+---@class ScriptRenderTarget
+---@class MouseButtonFlags
+---@class CursorBoxRenderType
+---@class ForceCondition
+---@class RenderLayer
+---@class CliffOrientation
+---@class ItemStackLocation
+---@class VehicleAutomaticTargetingParameters
+---@class SoundType
+---@class ItemPrototypeFilters
+---@class ModSettingPrototypeFilters
+---@class TechnologyPrototypeFilters
+---@class DecorativePrototypeFilters
+---@class AchievementPrototypeFilters
+---@class FluidPrototypeFilters
+---@class EquipmentPrototypeFilters
+---@class TilePrototypeFilters
+---@class RecipePrototypeFilters
+---@class EntityPrototypeFilters
+
+---@class GameViewSettings
+---@field show_controller_gui boolean [RW] Show the controller GUI elements.
+---@field show_minimap boolean [RW] Show the chart in the upper right-hand corner of the screen.
+---@field show_research_info boolean [RW] Show research progress and name in the upper right-hand corner of the screen.
+---@field show_entity_info boolean [RW] Show overlay icons on entities.
+---@field show_alert_gui boolean [RW] Show the flashing alert icons next to the player's toolbar.
+---@field update_entity_selection boolean [RW] When true (the default), mousing over an entity will select it.
+---@field show_rail_block_visualisation boolean [RW] When true (false is default), the rails will always show the rail block visualisation.
+---@field show_side_menu boolean [RW] Shows or hides the buttons row.
+---@field show_map_view_options boolean [RW] Shows or hides the view options when map is opened.
+---@field show_quickbar boolean [RW] Shows or hides quickbar of shortcuts.
+---@field show_shortcut_bar boolean [RW] Shows or hides the shortcut bar.
+
+---@class TileProperties
+---@field tier_from_start double [RW]
+---@field roughness double [RW]
+---@field elevation double [RW]
+---@field available_water double [RW]
+---@field temperature double [RW]
+]])
+end
+
 ---@param _args Args
 ---@param _data ApiFormat
 local function generate(_args, _data)
@@ -270,6 +414,7 @@ local function generate(_args, _data)
   generate_defines()
   generate_events()
   generate_classes()
+  generate_concepts()
   delete_invalid_files_from_target()
   args = nil
   data = nil
