@@ -34,7 +34,7 @@ local function delete_invalid_files_from_target()
   end
 end
 
-local file_prefix = "---@meta\n---@diagnostic disable: no-implicit-any\n"
+local file_prefix = "---@meta\n---@diagnostic disable: no-implicit-any\n---@diagnostic disable: trailing-space\n"
 
 ---@param description string|nil
 ---@return string
@@ -42,7 +42,7 @@ local function convert_description(description)
   if (not description) or description == "" then
     return ""
   else
-    return "---"..description:gsub("\n", "\n---\n---").."\n"
+    return "---"..description:gsub("\n", "  \n---").."\n"
   end
 end
 
@@ -208,8 +208,7 @@ local function generate_classes()
       if attribute.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..attribute.name)
       else
-        add("---["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]\n---\n"
-          ..convert_description(attribute.description)
+        add(convert_description("["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]\n"..attribute.description)
           .."---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
         -- TODO: see_also and subclasses
       end
@@ -228,6 +227,7 @@ local function generate_classes()
             ..(parameter.optional and "|nil" or "").."\n")
         end
         for _, group in ipairs(method.variant_parameter_groups) do
+          -- TODO: different groups can contain the same parameter name their description must be grouped together
           for _, parameter in ipairs(group.parameters) do
             add(convert_description("Applies to **"..group.name.."**."
               ..(parameter.description and parameter.description ~= "" and "\n"..parameter.description or ""))
