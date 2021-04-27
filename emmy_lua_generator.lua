@@ -221,19 +221,39 @@ local function generate_classes()
         local arg_class_name = class.name.."."..method.name..".arg"
         -- there is no good place for method.variant_parameter_description sadly
         add("---@class "..arg_class_name.."\n")
+        -- TODO: remove the insane amount of code duplication here
+        ---@type table<string, ApiParameter>
+        local variant_parameter_map = {}
+        ---@type ApiParameter[]
+        local all_variant_parameters = {}
         for _, parameter in ipairs(method.parameters) do
-          add(convert_description(parameter.description)
-            .."---@field "..parameter.name.." "..convert_type(parameter.type)
-            ..(parameter.optional and "|nil" or "").."\n")
+          parameter = linq.copy(parameter)
+          parameter.description = convert_description(parameter.description)
+          variant_parameter_map[parameter.name] = parameter
+          all_variant_parameters[#all_variant_parameters+1] = parameter
         end
         for _, group in ipairs(method.variant_parameter_groups) do
-          -- TODO: different groups can contain the same parameter name their description must be grouped together
-          for _, parameter in ipairs(group.parameters) do
-            add(convert_description("Applies to **"..group.name.."**."
-              ..(parameter.description and parameter.description ~= "" and "\n"..parameter.description or ""))
-              .."---@field "..parameter.name.." "..convert_type(parameter.type)
-              ..(parameter.optional and "|nil" or "").."\n")
+          for _, group_parameter in ipairs(group.parameters) do
+            local parameter = variant_parameter_map[group_parameter.name]
+            if parameter then
+              parameter.description = parameter.description.."---\n"
+                ..convert_description("Applies to **"..group.name.."**: "
+                ..(group_parameter.optional and "(optional)" or "(required)")
+                ..(group_parameter.description and group_parameter.description ~= "" and "\n"..group_parameter.description or ""))
+            else
+              parameter = linq.copy(group_parameter)
+              parameter.description = convert_description("Applies to **"..group.name.."**:"
+                ..(group_parameter.optional and "(optional)" or "(required)")
+                ..(parameter.description and parameter.description ~= "" and "\n"..parameter.description or ""))
+              variant_parameter_map[group_parameter.name] = parameter
+              all_variant_parameters[#all_variant_parameters+1] = parameter
+            end
           end
+        end
+        for _, parameter in ipairs(all_variant_parameters) do
+          add(parameter.description
+            .."---@field "..parameter.name.." "..convert_type(parameter.type)
+            ..(parameter.optional and "|nil" or "").."\n")
         end
         -- TODO: see_also and subclasses
         add("\n" -- blank line needed to break apart the description for the class fields and the method

@@ -12,6 +12,20 @@ local function select(t, selector)
   return result
 end
 
+---@generic TKey, TValue
+---@param t table<TKey, TValue>
+---@return table<TKey, TValue>
+local function copy(t)
+  local result = {}
+  ---@diagnostic disable:no-implicit-any
+  for k, v in pairs(t) do
+    result[k] = v
+  end
+  ---@diagnostic enable:no-implicit-any
+  return result
+end
+
 return {
   select = select,
+  copy = copy,
 }
