@@ -243,7 +243,7 @@ local function generate_classes()
                 ..(group_parameter.description and group_parameter.description ~= "" and "\n"..group_parameter.description or ""))
             else
               parameter = linq.copy(group_parameter)
-              parameter.description = convert_description("Applies to **"..group.name.."**:"
+              parameter.description = convert_description("Applies to **"..group.name.."**: "
                 ..(group_parameter.optional and "(optional)" or "(required)")
                 ..(parameter.description and parameter.description ~= "" and "\n"..parameter.description or ""))
               variant_parameter_map[group_parameter.name] = parameter
