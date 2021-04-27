@@ -15,9 +15,10 @@
 ---@alias ApiType ApiBasicType|ApiComplexType
 ---@alias ApiBasicType string
 ---@class ApiComplexType
----@field type string
----@field key ApiType|nil
----@field value ApiType
+---@field type "array"|"dictionary"|"variant"|string
+---@field key ApiType|nil @ used for "dictionary" and other
+---@field value ApiType|nil @ used for "array"|"dictionary" and other
+---@field options ApiType[] @ used for "variant"
 
 ---@class ApiSubSeeAlso
 ---@field subclasses string[]|nil @ which subclasses this can be used on
@@ -38,8 +39,8 @@
 ---@field parameters ApiParameter[]
 ---@field variant_parameter_groups ApiVariantParameterGroup[] @ type specific parameters
 ---@field variant_parameter_description string|nil
----@field return_type ApiType
----@field return_desription string
+---@field return_type ApiType|nil
+---@field return_desription string|nil
 
 ---@class ApiParameter : ApiName
 ---@field type ApiType
