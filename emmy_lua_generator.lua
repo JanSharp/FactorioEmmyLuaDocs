@@ -219,7 +219,7 @@ local function generate_classes()
       if method.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..method.name)
       elseif method.takes_table then -- method that takes a table
-        local arg_class_name = class.name.."."..method.name..".arg"
+        local arg_class_name = class.name.."."..method.name.."_param"
         -- there is no good place for method.variant_parameter_description sadly
         add("---@class "..arg_class_name.."\n")
         -- TODO: remove the insane amount of code duplication here
@@ -259,12 +259,12 @@ local function generate_classes()
         -- TODO: see_also and subclasses
         add("\n" -- blank line needed to break apart the description for the class fields and the method
           ..convert_description(method.description)
-          .."---@param arg "..arg_class_name.."\n")
+          .."---@param param "..arg_class_name.."\n")
         if method.return_type then
           add("---@return "..convert_type(method.return_type).."@\n"
             ..convert_description(method.return_description)) -- TODO: potentially missing or single line descriptions
         end
-        add(method.name.."=function(arg)end,\n")
+        add(method.name.."=function(param)end,\n")
       else -- regular method
         add(convert_description(method.description))
         -- TODO: see_also and subclasses
@@ -485,7 +485,7 @@ local function generate_custom()
 
 ---LuaGuiElement.elem_filters
 ---
----LuaGuiElement.add arg field elem_filters
+---LuaGuiElement.add param field elem_filters
 ---@class PrototypeFilters
 
 ---LuaGuiElement.tabs
@@ -511,10 +511,10 @@ local function generate_custom()
 ---LuaRemote.call return
 ---@class Anything
 
----LuaRendering.draw_polygon arg field vertices
+---LuaRendering.draw_polygon param field vertices
 ---@class CustomScriptRenderTarget
 
----LuaSurface.create_decoratives arg field decoratives
+---LuaSurface.create_decoratives param field decoratives
 ---@class Decorative
 
 ---LuaSurface.find_decoratives_filtered return
