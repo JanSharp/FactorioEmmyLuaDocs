@@ -34,7 +34,7 @@ local function delete_invalid_files_from_target()
   end
 end
 
-local file_prefix = "---@meta\n---@diagnostic disable: no-implicit-any\n---@diagnostic disable: trailing-space\n"
+local file_prefix = "---@meta\n---@diagnostic disable\n"
 
 ---@param description string|nil
 ---@return string
@@ -214,7 +214,7 @@ local function generate_classes()
         -- TODO: see_also and subclasses
       end
     end
-    add("---@diagnostic disable-next-line: unused-local\nlocal "..to_id(class.name).."={\n")
+    add("local "..to_id(class.name).."={\n")
     for _, method in ipairs(class.methods) do
       if method.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..method.name)
