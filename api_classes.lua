@@ -43,7 +43,9 @@
 ---@field variant_parameter_groups ApiVariantParameterGroup[]|nil
 ---variant_parameter_groups and variant_parameter_description are either both nil or both not nil
 ---@field variant_parameter_description string|nil
+---return_type and return_description are either both nil or both not nil
 ---@field return_type ApiType|nil
+---return_type and return_description are either both nil or both not nil
 ---@field return_description string|nil
 
 ---@class ApiParameter : ApiName
