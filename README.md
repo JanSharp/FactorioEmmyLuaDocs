@@ -8,8 +8,10 @@ for your system, on windows it shouldn't matter i believe.)
 
 # running the script
 
+Put the source data file in `source_data/api.json`.
+Then run this in the root directory of the project:
 ```
-./lua main.lua --source-file source_data/api.json --cache-dir cache --target-dir output
+./lua main.lua -- --source-file source_data/api.json --cache-dir cache --target-dir output
 ```
 (for some reason git bash wants that `./` at the start. Idk why.)
 
@@ -45,3 +47,13 @@ The following are from the [LuaPreprocessor](https://github.com/JanSharp/Factori
 - args_util.lua
 - path.lua
 - classes.lua (this has been updated in this repository)
+
+# Submodules
+
+If you want the submodule you can do something like this iirc:
+```
+git submodule init
+git submodule update
+```
+But i'm pretty sure i'm not even using anything the plugin provides. I just added it at the start
+because i thought i'd want to use it.
