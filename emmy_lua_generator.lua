@@ -39,7 +39,7 @@ local file_prefix = "---@meta\n---@diagnostic disable\n"
 ---@param description string|nil
 ---@return string
 local function convert_description(description)
-  if (not description) or description == "" then
+  if description == "" then
     return ""
   else
     return "---"..description:gsub("\n", "  \n---").."\n"
