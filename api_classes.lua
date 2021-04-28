@@ -38,7 +38,10 @@
 ---@class ApiMethod : ApiName, ApiSubSeeAlso
 ---@field takes_table boolean
 ---@field parameters ApiParameter[]
----@field variant_parameter_groups ApiVariantParameterGroup[] @ type specific parameters
+---type specific parameters\
+---variant_parameter_groups and variant_parameter_description are either both nil or both not nil
+---@field variant_parameter_groups ApiVariantParameterGroup[]|nil
+---variant_parameter_groups and variant_parameter_description are either both nil or both not nil
 ---@field variant_parameter_description string|nil
 ---@field return_type ApiType|nil
 ---@field return_description string|nil
@@ -55,5 +58,5 @@
 ---@field values ApiName[]
 ---@field subkeys ApiDefine[]
 
----@class ApiEvent : ApiName, ApiSubSeeAlso
+---@class ApiEvent : ApiName
 ---@field data ApiParameter[]

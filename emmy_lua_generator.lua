@@ -221,7 +221,6 @@ local function generate_classes()
         -- print(class.name.."::"..method.name)
       elseif method.takes_table then -- method that takes a table
         local arg_class_name = class.name.."."..method.name.."_param"
-        -- there is no good place for method.variant_parameter_description sadly
         add("---@class "..arg_class_name.."\n")
         -- TODO: remove the insane amount of code duplication here
         ---@type table<string, ApiParameter>
@@ -234,21 +233,24 @@ local function generate_classes()
           parameter_map[parameter.name] = parameter
           all_parameters[#all_parameters+1] = parameter
         end
-        for _, group in ipairs(method.variant_parameter_groups) do
-          for _, group_parameter in ipairs(group.parameters) do
-            local parameter = parameter_map[group_parameter.name]
-            if parameter then
-              parameter.description = parameter.description.."---\n"
-                ..convert_description("Applies to **"..group.name.."**: "
-                ..(group_parameter.optional and "(optional)" or "(required)")
-                ..(group_parameter.description and group_parameter.description ~= "" and "\n"..group_parameter.description or ""))
-            else
-              parameter = linq.copy(group_parameter)
-              parameter.description = convert_description("Applies to **"..group.name.."**: "
-                ..(group_parameter.optional and "(optional)" or "(required)")
-                ..(parameter.description and parameter.description ~= "" and "\n"..parameter.description or ""))
-              parameter_map[group_parameter.name] = parameter
-              all_parameters[#all_parameters+1] = parameter
+        if method.variant_parameter_groups then
+          -- there is no good place for method.variant_parameter_description sadly
+          for _, group in ipairs(method.variant_parameter_groups) do
+            for _, group_parameter in ipairs(group.parameters) do
+              local parameter = parameter_map[group_parameter.name]
+              if parameter then
+                parameter.description = parameter.description.."---\n"
+                  ..convert_description("Applies to **"..group.name.."**: "
+                  ..(group_parameter.optional and "(optional)" or "(required)")
+                  ..(group_parameter.description and group_parameter.description ~= "" and "\n"..group_parameter.description or ""))
+              else
+                parameter = linq.copy(group_parameter)
+                parameter.description = convert_description("Applies to **"..group.name.."**: "
+                  ..(group_parameter.optional and "(optional)" or "(required)")
+                  ..(parameter.description and parameter.description ~= "" and "\n"..parameter.description or ""))
+                parameter_map[group_parameter.name] = parameter
+                all_parameters[#all_parameters+1] = parameter
+              end
             end
           end
         end
