@@ -1,11 +1,4 @@
 
-# Setup
-
-If some requires don't work, make sure your environment variables for lua,
-if you have then overwritten that is, still include `./?.dll` and `./?.lua` respectively.
-(one being for c path the other for regular lua path thing. also use the right separators
-for your system, on windows it shouldn't matter i believe.)
-
 # running the script
 
 Put the source data file in `source_data/api.json`.
@@ -14,6 +7,13 @@ Then run this in the root directory of the project:
 ./lua main.lua -- --source-file source_data/api.json --cache-dir cache --target-dir output
 ```
 (for some reason git bash wants that `./` at the start. Idk why.)
+
+## Issues running the script
+
+If some requires don't work, make sure your environment variables for lua,
+if you have them overwritten that is, still include `./?.dll` and `./?.lua` respectively.
+(one being for c path the other for regular lua path thing. also use the right separators
+for your system, on windows it shouldn't matter i believe.)
 
 # Story about debugging and cache
 
