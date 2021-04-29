@@ -290,15 +290,21 @@ local function generate_classes()
         ---@type ApiParameter[]
         local sorted_parameters = sort_by_order(method.parameters)
         for _, parameter in ipairs(sorted_parameters) do
-          add("---@param "..to_id(parameter.name)..(parameter.optional and "?" or " ")
-            ..convert_type(parameter.type).."@\n"..convert_description(parameter.description)) -- TODO: potentially missing or single line descriptions
+          if parameter.name == "..." then
+            add("---@vararg "..convert_type(parameter.type).."\n"
+              ..convert_description("\n**vararg**:\n\n"..parameter.description))
+            -- TODO: potentially missing or single line descriptions
+          else
+            add("---@param "..to_id(parameter.name)..(parameter.optional and "?" or " ")
+              ..convert_type(parameter.type).."@\n"..convert_description(parameter.description)) -- TODO: potentially missing or single line descriptions
+          end
         end
         if method.return_type then
           add("---@return "..convert_type(method.return_type).."@\n"
             ..convert_description(method.return_description)) -- TODO: potentially missing or single line descriptions
         end
         add(method.name.."=function("
-          ..table.concat(linq.select(sorted_parameters, function(v) return to_id(v.name) end), ",")
+          ..table.concat(linq.select(sorted_parameters, function(v) return v.name == "..." and "..." or to_id(v.name) end), ",")
           ..")end,\n")
       end
     end
