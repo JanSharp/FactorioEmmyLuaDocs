@@ -194,13 +194,13 @@ local function generate_defines()
   local function add_define(define, name_prefix)
     -- every define name and value name is expected to be a valid identifier
     local name = name_prefix..define.name
-    add(convert_description(define.description)
-      .."---@class "..name.."\n"..name.."={\n")
+    add(convert_description(define.description))
+    add("---@class "..name.."\n"..name.."={\n")
     name_prefix = name.."."
     if define.values then
       for _, value in ipairs(define.values) do
-        add(convert_description(value.description)
-          ..to_id(value.name).."=0,\n")
+        add(convert_description(value.description))
+        add(to_id(value.name).."=0,\n")
       end
     end
     add("}\n")
@@ -226,12 +226,12 @@ local function generate_events()
   end
   add(file_prefix)
   for _, event in ipairs(data.events) do
-    add(convert_description(event.description)
-      .."---@class "..event.name.."\n")
+    add(convert_description(event.description))
+    add("---@class "..event.name.."\n")
     for _, param in ipairs(event.data) do
-      add(convert_description(param.description)
-        .."---@field "..param.name.." "..convert_type(param.type)
-        ..(param.optional and "|nil" or "").."\n")
+      add(convert_description(param.description))
+      add("---@field "..param.name.." "..convert_type(param.type))
+      add((param.optional and "|nil" or "").."\n")
     end
   end
   write_file_to_target("events.lua", table.concat(result))
@@ -310,17 +310,17 @@ local function generate_classes()
       add(")end,\n")
     end
 
-    add(file_prefix
-      ..convert_description(class.description)
-      .."---@class "..class.name..convert_base_classes(class.base_classes).."\n")
+    add(file_prefix)
+    add(convert_description(class.description))
+    add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
     -- TODO: see_also and subclasses
     for _, attribute in ipairs(class.attributes) do
       if attribute.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..attribute.name)
       else
-        add(convert_description("["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
-          ..(attribute.description and attribute.description ~= "" and "\n"..attribute.description or "")) -- TODO: code duplication
-          .."---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
+        add(convert_description("["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"))
+        add((attribute.description and attribute.description ~= "" and "\n"..attribute.description or "")) -- TODO: code duplication
+        add("---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
         -- TODO: see_also and subclasses
       end
     end
@@ -365,14 +365,14 @@ local function generate_classes()
           end
         end
         for _, parameter in ipairs(all_parameters) do
-          add(parameter.description
-            .."---@field "..parameter.name.." "..convert_type(parameter.type)
-            ..(parameter.optional and "|nil" or "").."\n")
+          add(parameter.description)
+          add("---@field "..parameter.name.." "..convert_type(parameter.type))
+          add((parameter.optional and "|nil" or "").."\n")
         end
         -- TODO: see_also and subclasses
-        add("\n" -- blank line needed to break apart the description for the class fields and the method
-          ..convert_description(method.description)
-          .."---@param param "..arg_class_name.."\n")
+        add("\n") -- blank line needed to break apart the description for the class fields and the method
+        add(convert_description(method.description))
+        add("---@param param "..arg_class_name.."\n")
         add_return_annotation(method)
         add(method.name.."=function(param)end,\n")
       else
