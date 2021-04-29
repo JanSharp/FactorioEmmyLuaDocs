@@ -47,13 +47,44 @@ end
 
 local file_prefix = "---@meta\n---@diagnostic disable\n"
 
----@param description string|nil
+---is this a single line string?
+---@param str string
+---@return boolean
+local function is_single_line(str)
+  return not str:find("\n")
+end
+
+---@param description string
+---@return string
+local function preprocess_description(description)
+  -- TODO: handle internal references and potentially do other things as well
+  return description:gsub("\n", "  \n")
+end
+
+---expects the current position to be a newline\
+---current position will also be a newline after adding this
+---@param description string
 ---@return string
 local function convert_description(description)
   if description == "" then
     return ""
   else
-    return "---"..description:gsub("\n", "  \n---").."\n"
+    return "---"..preprocess_description(description):gsub("\n", "\n---").."\n"
+  end
+end
+
+---expects the current position to be just past the type of the\
+---param or return annotation\
+---current position will be a newline after adding this, just like convert_description
+---@param description string
+---@return string
+local function convert_param_or_return_description(description)
+  if description == "" then
+    return "\n"
+  elseif is_single_line(description) then
+    return "@"..preprocess_description(description).."\n"
+  else
+    return "@\n"..convert_description(description)
   end
 end
 
@@ -140,6 +171,15 @@ local function convert_type(api_type)
   end
 end
 
+---expects to be just after the annotation tag, but with a space already added\
+---does everything needed for param or return annotations
+---@param api_type ApiType
+---@param description string
+---@return string
+local function convert_param_or_return(api_type, description)
+  return convert_type(api_type)..convert_param_or_return_description(description)
+end
+
 local function generate_defines()
   local result = {}
   local c = 0
@@ -216,6 +256,60 @@ local function generate_classes()
       c = c + 1
       result[c] = part
     end
+
+    ---@param parameter ApiParameter
+    local function add_vararg_annotation(parameter)
+      add("---@vararg "..convert_type(parameter.type).."\n")
+      if parameter.description ~= "" then
+        local description = "\n**vararg**:"
+        if is_single_line(parameter.description) then
+          description = description.." "..parameter.description
+        else
+          description = description.."\n\n"..parameter.description
+        end
+        add(convert_description(description))
+      end
+    end
+
+    ---@param parameter ApiParameter
+    local function add_param_annontation(parameter)
+      add("---@param "..to_id(parameter.name)..(parameter.optional and "?" or " "))
+      add(convert_param_or_return(parameter.type, parameter.description))
+    end
+
+    ---@param method ApiMethod
+    local function add_return_annotation(method)
+      if method.return_type then
+        add("---@return "..convert_param_or_return(method.return_type, method.return_description))
+      end
+    end
+
+    ---@param method ApiMethod
+    local function add_regular_method(method)
+      add(convert_description(method.description))
+      -- TODO: see_also and subclasses
+
+      ---@type ApiParameter[]
+      local sorted_parameters = sort_by_order(method.parameters)
+      for _, parameter in ipairs(sorted_parameters) do
+        if parameter.name == "..." then
+          add_vararg_annotation(parameter)
+        else
+          add_param_annontation(parameter)
+        end
+      end
+      add_return_annotation(method)
+
+      ---@param parameter ApiParameter
+      local name_list = linq.select(sorted_parameters, function(parameter)
+        return parameter.name == "..." and "..." or to_id(parameter.name)
+      end)
+
+      add(method.name.."=function(")
+      add(table.concat(name_list, ","))
+      add(")end,\n")
+    end
+
     add(file_prefix
       ..convert_description(class.description)
       .."---@class "..class.name..convert_base_classes(class.base_classes).."\n")
@@ -279,33 +373,10 @@ local function generate_classes()
         add("\n" -- blank line needed to break apart the description for the class fields and the method
           ..convert_description(method.description)
           .."---@param param "..arg_class_name.."\n")
-        if method.return_type then
-          add("---@return "..convert_type(method.return_type).."@\n"
-            ..convert_description(method.return_description)) -- TODO: potentially missing or single line descriptions
-        end
+        add_return_annotation(method)
         add(method.name.."=function(param)end,\n")
-      else -- regular method
-        add(convert_description(method.description))
-        -- TODO: see_also and subclasses
-        ---@type ApiParameter[]
-        local sorted_parameters = sort_by_order(method.parameters)
-        for _, parameter in ipairs(sorted_parameters) do
-          if parameter.name == "..." then
-            add("---@vararg "..convert_type(parameter.type).."\n"
-              ..convert_description("\n**vararg**:\n\n"..parameter.description))
-            -- TODO: potentially missing or single line descriptions
-          else
-            add("---@param "..to_id(parameter.name)..(parameter.optional and "?" or " ")
-              ..convert_type(parameter.type).."@\n"..convert_description(parameter.description)) -- TODO: potentially missing or single line descriptions
-          end
-        end
-        if method.return_type then
-          add("---@return "..convert_type(method.return_type).."@\n"
-            ..convert_description(method.return_description)) -- TODO: potentially missing or single line descriptions
-        end
-        add(method.name.."=function("
-          ..table.concat(linq.select(sorted_parameters, function(v) return v.name == "..." and "..." or to_id(v.name) end), ",")
-          ..")end,\n")
+      else
+        add_regular_method(method)
       end
     end
     add("}")
