@@ -54,6 +54,25 @@ local function is_single_line(str)
   return not str:find("\n")
 end
 
+---@class ExtendStringParam
+---@field pre string|nil @ if str is not empty this will be preprended
+---@field str string @ the part to concat which may be empty ("")
+---@field post string|nil @ if str is not empty this will be appended
+---if str is empty this will be used\
+---pre and post will not be applied however
+---@field fallback string|nil
+
+---@param param ExtendStringParam
+local function extend_string(param)
+  if param.str == "" then
+    return param.fallback or ""
+  else
+    return (param.pre and param.pre or "")
+      ..param.str
+      ..(param.post and param.post or "")
+  end
+end
+
 ---@param description string
 ---@return string
 local function preprocess_description(description)
@@ -257,6 +276,17 @@ local function generate_classes()
       result[c] = part
     end
 
+
+    ---@param attribute ApiAttribute
+    local function add_attribute(attribute)
+      add(convert_description(
+        "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
+        ..extend_string{pre = "\n", str = attribute.description}
+      ))
+      add("---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
+      -- TODO: see_also and subclasses
+    end
+
     ---@param parameter ApiParameter
     local function add_vararg_annotation(parameter)
       add("---@vararg "..convert_type(parameter.type).."\n")
@@ -310,20 +340,21 @@ local function generate_classes()
       add(")end,\n")
     end
 
+
+
     add(file_prefix)
     add(convert_description(class.description))
     add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
     -- TODO: see_also and subclasses
+
     for _, attribute in ipairs(class.attributes) do
       if attribute.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..attribute.name)
       else
-        add(convert_description("["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"))
-        add((attribute.description and attribute.description ~= "" and "\n"..attribute.description or "")) -- TODO: code duplication
-        add("---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
-        -- TODO: see_also and subclasses
+        add_attribute(attribute)
       end
     end
+
     add("local "..to_id(class.name).."={\n")
     for _, method in ipairs(class.methods) do
       if method.name:find("^operator") then -- TODO: operators
