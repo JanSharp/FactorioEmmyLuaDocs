@@ -11,6 +11,9 @@
 ---@class ApiName
 ---@field name string
 ---@field description string
+---since every list is sorted alphabetically, in order to use data in the order it is\
+---used for the html docs you must use this order property to sort the list
+---@field order integer
 
 ---@alias ApiType ApiBasicType|ApiComplexType
 ---@alias ApiBasicType string
@@ -28,7 +31,7 @@
 ---@class ApiClass : ApiName, ApiSubSeeAlso
 ---@field methods ApiMethod[]
 ---@field attributes ApiAttribute[]
----@field base_classes string[]
+---@field base_classes string[]|nil
 
 ---@class ApiAttribute : ApiName, ApiSubSeeAlso
 ---@field type ApiType
@@ -57,8 +60,8 @@
 ---@field parameters ApiParameter[]
 
 ---@class ApiDefine : ApiName
----@field values ApiName[]
----@field subkeys ApiDefine[]
+---@field values ApiName[]|nil
+---@field subkeys ApiDefine[]|nil
 
 ---@class ApiEvent : ApiName
 ---@field data ApiParameter[]

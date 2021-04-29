@@ -34,6 +34,17 @@ local function delete_invalid_files_from_target()
   end
 end
 
+---@generic T
+---@param t T[]
+---@return T[]
+local function sort_by_order(t)
+  local sorted = linq.copy(t)
+  table.sort(sorted, function(l, r)
+    return l.order < r.order
+  end)
+  return sorted
+end
+
 local file_prefix = "---@meta\n---@diagnostic disable\n"
 
 ---@param description string|nil
@@ -146,13 +157,17 @@ local function generate_defines()
     add(convert_description(define.description)
       .."---@class "..name.."\n"..name.."={\n")
     name_prefix = name.."."
-    for _, value in ipairs(define.values) do
-      add(convert_description(value.description)
-        ..to_id(value.name).."=0,\n")
+    if define.values then
+      for _, value in ipairs(define.values) do
+        add(convert_description(value.description)
+          ..to_id(value.name).."=0,\n")
+      end
     end
     add("}\n")
-    for _, subkey in ipairs(define.subkeys) do
-      add_define(subkey, name_prefix)
+    if define.subkeys then
+      for _, subkey in ipairs(define.subkeys) do
+        add_define(subkey, name_prefix)
+      end
     end
   end
   for _, define in ipairs(data.defines) do
@@ -185,7 +200,7 @@ end
 ---@param base_classes string[]
 ---@return string
 local function convert_base_classes(base_classes)
-  if base_classes[1] then
+  if base_classes then
     return ":"..table.concat(base_classes, ",")
   else
     return ""
@@ -227,7 +242,8 @@ local function generate_classes()
         local parameter_map = {}
         ---@type ApiParameter[]
         local all_parameters = {}
-        for _, parameter in ipairs(method.parameters) do
+        ---@type ApiParameter
+        for _, parameter in ipairs(sort_by_order(method.parameters)) do
           parameter = linq.copy(parameter)
           parameter.description = convert_description(parameter.description)
           parameter_map[parameter.name] = parameter
@@ -271,7 +287,9 @@ local function generate_classes()
       else -- regular method
         add(convert_description(method.description))
         -- TODO: see_also and subclasses
-        for _, parameter in ipairs(method.parameters) do
+        ---@type ApiParameter[]
+        local sorted_parameters = sort_by_order(method.parameters)
+        for _, parameter in ipairs(sorted_parameters) do
           add("---@param "..to_id(parameter.name)..(parameter.optional and "?" or " ")
             ..convert_type(parameter.type).."@\n"..convert_description(parameter.description)) -- TODO: potentially missing or single line descriptions
         end
@@ -280,7 +298,7 @@ local function generate_classes()
             ..convert_description(method.return_description)) -- TODO: potentially missing or single line descriptions
         end
         add(method.name.."=function("
-          ..table.concat(linq.select(method.parameters, function(v) return to_id(v.name) end), ",")
+          ..table.concat(linq.select(sorted_parameters, function(v) return to_id(v.name) end), ",")
           ..")end,\n")
       end
     end

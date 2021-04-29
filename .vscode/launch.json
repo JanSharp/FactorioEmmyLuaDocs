@@ -11,7 +11,7 @@
         "--source-file", "source_data/api.json",
         "--cache-dir", "cache",
         "--target-dir", "output",
-        "--debug-api-json-crc", "2289483979.0",
+        "--debug-api-json-crc", "2533182349.0",
       ],
     },
   ]
