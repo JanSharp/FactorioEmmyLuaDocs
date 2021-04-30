@@ -283,8 +283,8 @@ local function generate_classes()
         "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
         ..extend_string{pre = "\n", str = attribute.description}
       ))
-      add("---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
       -- TODO: see_also and subclasses
+      add("---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
     end
 
     ---@param parameter ApiParameter
@@ -314,6 +314,7 @@ local function generate_classes()
       end
     end
 
+
     ---@param method ApiMethod
     local function add_regular_method(method)
       add(convert_description(method.description))
@@ -341,11 +342,68 @@ local function generate_classes()
     end
 
 
+    ---@param method ApiMethod
+    local function add_method_taking_table(method)
+      local param_class_name = class.name.."."..method.name.."_param"
+      add("---@class "..param_class_name.."\n")
+
+      ---@type table<string, ApiParameter>
+      local custom_parameter_map = {}
+      ---@type ApiParameter[]
+      local custom_parameters = {}
+
+      ---@typelist integer, ApiParameter
+      for i, parameter in ipairs(sort_by_order(method.parameters)) do
+        local custom_parameter = linq.copy(parameter)
+        custom_parameter_map[custom_parameter.name] = custom_parameter
+        custom_parameters[i] = custom_parameter
+      end
+
+      if method.variant_parameter_groups then
+        -- there is no good place for method.variant_parameter_description sadly
+        for _, group in ipairs(method.variant_parameter_groups) do
+          for _, parameter in ipairs(group.parameters) do
+
+            local custom_description = "Applies to **"..group.name.."**: "
+              ..(parameter.optional and "(optional)" or "(required)")
+              ..extend_string{pre = "\n", str = parameter.description}
+
+            local custom_parameter = custom_parameter_map[parameter.name]
+            if custom_parameter then
+              custom_parameter.description = extend_string{
+                str = custom_parameter.description, post = "\n\n"
+              }..custom_description
+            else
+              custom_parameter = linq.copy(parameter)
+              custom_parameter.description = custom_description
+              custom_parameter_map[parameter.name] = custom_parameter
+              custom_parameters[#custom_parameters+1] = custom_parameter
+            end
+
+          end
+        end
+      end
+
+      for _, custom_parameter in ipairs(custom_parameters) do
+        add(convert_description(custom_parameter.description))
+        add("---@field "..custom_parameter.name.." "..convert_type(custom_parameter.type))
+        add((custom_parameter.optional and "|nil\n" or "\n"))
+      end
+
+      add("\n") -- blank line needed to break apart the description for the class fields and the method
+      add(convert_description(method.description))
+      -- TODO: see_also and subclasses
+      add("---@param param "..param_class_name.."\n")
+      add_return_annotation(method)
+      add(method.name.."=function(param)end,\n")
+    end
+
+
 
     add(file_prefix)
     add(convert_description(class.description))
-    add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
     -- TODO: see_also and subclasses
+    add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
 
     for _, attribute in ipairs(class.attributes) do
       if attribute.name:find("^operator") then -- TODO: operators
@@ -360,52 +418,7 @@ local function generate_classes()
       if method.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..method.name)
       elseif method.takes_table then -- method that takes a table
-        local arg_class_name = class.name.."."..method.name.."_param"
-        add("---@class "..arg_class_name.."\n")
-        -- TODO: remove the insane amount of code duplication here
-        ---@type table<string, ApiParameter>
-        local parameter_map = {}
-        ---@type ApiParameter[]
-        local all_parameters = {}
-        ---@type ApiParameter
-        for _, parameter in ipairs(sort_by_order(method.parameters)) do
-          parameter = linq.copy(parameter)
-          parameter.description = convert_description(parameter.description)
-          parameter_map[parameter.name] = parameter
-          all_parameters[#all_parameters+1] = parameter
-        end
-        if method.variant_parameter_groups then
-          -- there is no good place for method.variant_parameter_description sadly
-          for _, group in ipairs(method.variant_parameter_groups) do
-            for _, group_parameter in ipairs(group.parameters) do
-              local parameter = parameter_map[group_parameter.name]
-              if parameter then
-                parameter.description = parameter.description.."---\n"
-                  ..convert_description("Applies to **"..group.name.."**: "
-                  ..(group_parameter.optional and "(optional)" or "(required)")
-                  ..(group_parameter.description and group_parameter.description ~= "" and "\n"..group_parameter.description or ""))
-              else
-                parameter = linq.copy(group_parameter)
-                parameter.description = convert_description("Applies to **"..group.name.."**: "
-                  ..(group_parameter.optional and "(optional)" or "(required)")
-                  ..(parameter.description and parameter.description ~= "" and "\n"..parameter.description or ""))
-                parameter_map[group_parameter.name] = parameter
-                all_parameters[#all_parameters+1] = parameter
-              end
-            end
-          end
-        end
-        for _, parameter in ipairs(all_parameters) do
-          add(parameter.description)
-          add("---@field "..parameter.name.." "..convert_type(parameter.type))
-          add((parameter.optional and "|nil" or "").."\n")
-        end
-        -- TODO: see_also and subclasses
-        add("\n") -- blank line needed to break apart the description for the class fields and the method
-        add(convert_description(method.description))
-        add("---@param param "..arg_class_name.."\n")
-        add_return_annotation(method)
-        add(method.name.."=function(param)end,\n")
+        add_method_taking_table(method)
       else
         add_regular_method(method)
       end
