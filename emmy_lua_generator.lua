@@ -190,14 +190,21 @@ for _, keyword in ipairs(keywords) do
   keyword_map[keyword] = keyword.."_"
 end
 
+---adds an `_` if the given string is a lua keyword
+---@param str string
+---@return string
+local function escape_keyword(str)
+  local escaped_keyword = keyword_map[str]
+  return escaped_keyword and escaped_keyword or str
+end
+
 ---convert a string to a valid lua identifier
 ---@param str string
 ---@return string
 local function to_id(str)
   str = str:gsub("[^a-zA-Z0-9_]", "_")
   str = str:find("^[0-9]") and "_"..str or str
-  local escaped_keyword = keyword_map[str]
-  return escaped_keyword and escaped_keyword or str
+  return escape_keyword(str)
 end
 
 ---@param api_type ApiType
@@ -357,7 +364,7 @@ local function generate_classes()
 
     ---@param parameter ApiParameter
     local function add_param_annontation(parameter)
-      add("---@param "..to_id(parameter.name)..(parameter.optional and "?" or " "))
+      add("---@param "..escape_keyword(parameter.name)..(parameter.optional and "?" or " "))
       add(convert_param_or_return(parameter.type, parameter.description))
     end
 
@@ -386,7 +393,7 @@ local function generate_classes()
 
       ---@param parameter ApiParameter
       local name_list = linq.select(sorted_parameters, function(parameter)
-        return parameter.name == "..." and "..." or to_id(parameter.name)
+        return escape_keyword(parameter.name)
       end)
 
       add(method.name.."=function(")
