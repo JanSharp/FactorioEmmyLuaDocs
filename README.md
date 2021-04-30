@@ -11,7 +11,7 @@ public repo and you weren't a collaborator. Thank you!
 Put the source data file in `source_data/api.json`.
 Then run this in the root directory of the project:
 ```
-./lua main.lua -- --source-file source_data/api.json --cache-dir cache --target-dir output
+./lua main.lua -- --source-file source_data/api.json --target-dir output
 ```
 (for some reason git bash wants that `./` at the start. Idk why.)
 

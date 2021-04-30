@@ -9,8 +9,8 @@
       },
       "args": [
         "--source-file", "source_data/api.json",
-        "--cache-dir", "cache",
         "--target-dir", "output",
+        "--cache-dir", "cache",
         "--debug-api-json-crc", "2533182349.0",
       ],
     },

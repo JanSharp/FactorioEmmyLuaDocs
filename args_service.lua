@@ -4,7 +4,7 @@ local Path = require("path")
 
 ---@class Args
 ---@field source_path Path
----@field cache_dir_path Path
+---@field cache_dir_path Path|nil
 ---@field target_dir_path Path
 ---@field debug_api_json_crc number|nil
 
@@ -69,7 +69,6 @@ local function get_args(arg)
   rename_groups()
 
   assert_group("source_file")
-  assert_group("cache_dir")
   assert_group("target_dir")
 
   single("source_file")
@@ -79,8 +78,10 @@ local function get_args(arg)
 
   args.source_path = Path.new(args.source_file)
   args.source_file = nil
-  args.cache_dir_path = Path.new(args.cache_dir)
-  args.cache_dir = nil
+  if args.cache_dir then
+    args.cache_dir_path = Path.new(args.cache_dir)
+    args.cache_dir = nil
+  end
   args.target_dir_path = Path.new(args.target_dir)
   args.target_dir = nil
   args.debug_api_json_crc = args.debug_api_json_crc and tonumber(args.debug_api_json_crc)
