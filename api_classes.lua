@@ -24,21 +24,21 @@
 ---@field options ApiType[]|nil @ used for "variant"
 ---@field parameters string[]|nil @ used for "function"
 
----@class ApiSubSeeAlso
+---@class ApiSubSeeAlso : ApiName
 ---@field subclasses string[]|nil @ which subclasses this can be used on
 ---@field see_also string[]|nil @ references to members of other classes
 
----@class ApiClass : ApiName, ApiSubSeeAlso
+---@class ApiClass : ApiSubSeeAlso
 ---@field methods ApiMethod[]
 ---@field attributes ApiAttribute[]
 ---@field base_classes string[]|nil
 
----@class ApiAttribute : ApiName, ApiSubSeeAlso
+---@class ApiAttribute : ApiSubSeeAlso
 ---@field type ApiType
 ---@field read boolean
 ---@field write boolean
 
----@class ApiMethod : ApiName, ApiSubSeeAlso
+---@class ApiMethod : ApiSubSeeAlso
 ---@field takes_table boolean
 ---@field parameters ApiParameter[]
 ---type specific parameters\

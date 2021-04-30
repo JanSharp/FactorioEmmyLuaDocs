@@ -12,6 +12,8 @@ local data
 ---@type table<string, boolean>
 local valid_target_files
 
+local file_prefix = "---@meta\n---@diagnostic disable\n"
+
 ---@param name string
 ---@param text string
 local function write_file_to_target(name, text)
@@ -45,7 +47,11 @@ local function sort_by_order(t)
   return sorted
 end
 
-local file_prefix = "---@meta\n---@diagnostic disable\n"
+---@param str string
+---@return string|nil @ nil if str == ""
+local function empty_to_nil(str)
+  return str ~= "" and str or nil
+end
 
 ---is this a single line string?
 ---@param str string
@@ -71,6 +77,14 @@ local function extend_string(param)
       ..param.str
       ..(param.post and param.post or "")
   end
+end
+
+---@param reference string
+---@param display_name string
+---@return string @ markdown link
+local function resolve_internal_reference(reference, display_name)
+  ---TODO: resolve internal reference
+  return "["..display_name.."]("..reference..")"
 end
 
 ---@param description string
@@ -105,6 +119,44 @@ local function convert_param_or_return_description(description)
   else
     return "@\n"..convert_description(description)
   end
+end
+
+---May also take an ApiSubSeeAlso as a single parameter
+---@param description string
+---@param subclasses string[]|nil @ which subclasses this can be used on
+---@param see_also string[]|nil @ references to members of other classes
+local function convert_description_sub_see_also(description, subclasses, see_also)
+  if type(description) == "table" then
+    ---@type ApiSubSeeAlso
+    local sub_see_also = description
+    description = sub_see_also.description
+    subclasses = sub_see_also.subclasses
+    see_also = sub_see_also.see_also
+  end
+
+  local result = {empty_to_nil(description)}
+
+  if subclasses then
+    local length = #subclasses
+    local last = subclasses[length]
+    subclasses[length] = nil
+    result[#result+1] = "_Can only be used if this is "
+      ..table.concat(subclasses, ", ")
+      ..(length > 1 and "or " or "")
+      ..last
+      .."_"
+    subclasses[length] = last -- do not leave the table modified
+  end
+
+  if see_also then
+    result[#result+1] = "### See also\n"
+      ---@param ref string
+      ..table.concat(linq.select(see_also, function(ref)
+        return "- "..resolve_internal_reference(ref, ref)
+      end), "\n")
+  end
+
+  return convert_description(table.concat(result, "\n\n"))
 end
 
 ---@type string[]
@@ -279,11 +331,13 @@ local function generate_classes()
 
     ---@param attribute ApiAttribute
     local function add_attribute(attribute)
-      add(convert_description(
+      add(convert_description_sub_see_also(
         "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
-        ..extend_string{pre = "\n", str = attribute.description}
+        ..extend_string{pre = "\n", str = attribute.description},
+
+        attribute.subclasses,
+        attribute.see_also
       ))
-      -- TODO: see_also and subclasses
       add("---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
     end
 
@@ -317,8 +371,7 @@ local function generate_classes()
 
     ---@param method ApiMethod
     local function add_regular_method(method)
-      add(convert_description(method.description))
-      -- TODO: see_also and subclasses
+      add(convert_description_sub_see_also(method))
 
       ---@type ApiParameter[]
       local sorted_parameters = sort_by_order(method.parameters)
@@ -391,8 +444,7 @@ local function generate_classes()
       end
 
       add("\n") -- blank line needed to break apart the description for the class fields and the method
-      add(convert_description(method.description))
-      -- TODO: see_also and subclasses
+      add(convert_description_sub_see_also(method))
       add("---@param param "..param_class_name.."\n")
       add_return_annotation(method)
       add(method.name.."=function(param)end,\n")
@@ -401,8 +453,7 @@ local function generate_classes()
 
 
     add(file_prefix)
-    add(convert_description(class.description))
-    -- TODO: see_also and subclasses
+    add(convert_description_sub_see_also(class))
     add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
 
     for _, attribute in ipairs(class.attributes) do
@@ -424,6 +475,7 @@ local function generate_classes()
       end
     end
     add("}")
+
     write_file_to_target(to_id(class.name)..".lua", table.concat(result))
   end
 end
