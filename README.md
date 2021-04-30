@@ -28,7 +28,7 @@ The debugger makes loading the json file take several seconds, maybe even a minu
 That's why the cache exists.
 To validate the cache is up to date the script stores the crc32 of the source file
 and checks that against the source file every time it runs.
-Calculating the crc32 of said sorce file takes even longer than loading the json file
+Calculating the crc32 of said source file takes even longer than loading the json file
 with the debugger enabled.
 That's why `--debug-api-json-crc` exists. It bypasses calculating the crc32 and just
 uses what you give it.

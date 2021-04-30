@@ -468,7 +468,7 @@ local function generate_classes()
     for _, method in ipairs(class.methods) do
       if method.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..method.name)
-      elseif method.takes_table then -- method that takes a table
+      elseif method.takes_table then
         add_method_taking_table(method)
       else
         add_regular_method(method)
