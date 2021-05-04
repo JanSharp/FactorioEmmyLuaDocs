@@ -13,12 +13,14 @@
 ---@field description string
 ---since every list is sorted alphabetically, in order to use data in the order it is\
 ---used for the html docs you must use this order property to sort the list
+---@field notes string[]|nil
+---@field examples string[][]|nil
 ---@field order integer
 
 ---@alias ApiType ApiBasicType|ApiComplexType
 ---@alias ApiBasicType string
 ---@class ApiComplexType
----@field type "array"|"dictionary"|"variant"|"CustomArray"|"CustomDictionary"|"function"|string
+---@field complex_type "array"|"dictionary"|"variant"|"CustomArray"|"CustomDictionary"|"function"|string
 ---@field key ApiType|nil @ used for "dictionary"|"CustomDictionary" and other
 ---@field value ApiType|nil @ used for "array"|"dictionary"|"CustomArray"|"CustomDictionary" and other
 ---@field options ApiType[]|nil @ used for "variant"

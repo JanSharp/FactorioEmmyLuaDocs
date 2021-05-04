@@ -5,14 +5,30 @@ local file = require("file")
 local serpent = require("serpent")
 local linq = require("linq")
 
----@type Args
-local args
----@type ApiFormat
-local data
----@type table<string, boolean>
-local valid_target_files
+
+local args ---@type Args
+local data ---@type ApiFormat
+local class_name_lut ---@type table<string, boolean>
+local event_name_lut ---@type table<string, boolean>
+local define_name_lut ---@type table<string, boolean>
+local valid_target_files ---@type table<string, boolean>
+local api_base_url ---@type string
 
 local file_prefix = "---@meta\n---@diagnostic disable\n"
+
+local builtin_type_name_lut = {
+  ["float"] = true,
+  ["double"] = true,
+  ["int"] = true,
+  ["int8"] = true,
+  ["uint"] = true,
+  ["uint8"] = true,
+  ["uint16"] = true,
+  ["uint64"] = true,
+  ["string"] = true,
+  ["boolean"] = true,
+  ["table"] = true,
+}
 
 ---@param name string
 ---@param text string
@@ -79,19 +95,105 @@ local function extend_string(param)
   end
 end
 
+---requires data to be set already
+local function populate_luts()
+  ---@param name ApiName
+  ---@return string
+  local name_selector = function(name)
+    return name.name
+  end
+  class_name_lut = linq.to_dict(data.classes, name_selector)
+  event_name_lut = linq.to_dict(data.events, name_selector)
+
+  define_name_lut = {}
+  ---@param define ApiDefine
+  ---@param name_prefix string
+  local function add_define(define, name_prefix)
+    local name = name_prefix..define.name
+    define_name_lut[name] = true
+    name_prefix = name.."."
+    if define.values then
+      for _, value in ipairs(define.values) do
+        define_name_lut[name_prefix..value.name] = true
+      end
+    end
+    if define.subkeys then
+      for _, subkey in ipairs(define.subkeys) do
+        add_define(subkey, name_prefix)
+      end
+    end
+  end
+  for _, define in ipairs(data.defines) do
+    add_define(define, "defines.")
+  end
+end
+
 ---@param reference string
----@param display_name string
+---@param display_name? string
 ---@return string @ markdown link
 local function resolve_internal_reference(reference, display_name)
-  ---TODO: resolve internal reference
-  return "["..display_name.."]("..reference..")"
+  local relative_link
+  if builtin_type_name_lut[reference] then
+    relative_link = "Builtin-Types.html#"..reference
+  elseif class_name_lut[reference] then
+    relative_link = reference..".html"
+  elseif event_name_lut[reference] then
+    relative_link = "events.html#"..reference
+  elseif define_name_lut[reference] then
+    relative_link = "defines.html#"..reference
+  else
+    local class_name, member_name = reference:match("^(.-)::(.-)$") ---@type string
+    if class_name then
+      relative_link = class_name..".html#"..class_name.."."..member_name
+    elseif reference:find("Filters$") then
+      if reference:find("^Lua") then
+        relative_link = "Event-Filters.html#"..reference
+      else
+        relative_link = "Concepts.html#"..reference
+      end
+    else
+      relative_link = "Concepts.html#"..reference
+    end
+  end
+  return "["..(display_name or reference).."]("..api_base_url..relative_link..")"
+end
+
+---@param link string
+---@param display_name? string
+---@return string
+local function resolve_link(link, display_name)
+  if link:find("^http://")
+    or link:find("^https://")
+  then
+    return "["..(display_name or link).."]("..link..")"
+  elseif  link:find("%.html$")
+    or link:find("%.html#")
+  then
+    return "["..(display_name or link).."]("..api_base_url..link..")"
+  else
+    return resolve_internal_reference(link, display_name)
+  end
+end
+
+---@param str string
+local function resolve_all_links(str)
+  local parts = {} ---@type string[]
+  local prev_finish = 1
+  ---@typelist number, string, string, number
+  for start, name, link, finish in str:gmatch("()%[(.-)%]%((.-)%)()") do
+    parts[#parts+1] = str:sub(prev_finish, start - 1)
+    parts[#parts+1] = resolve_link(link, empty_to_nil(name))
+    prev_finish = finish
+  end
+  parts[#parts+1] = str:sub(prev_finish)
+  return table.concat(parts)
 end
 
 ---@param description string
 ---@return string
 local function preprocess_description(description)
-  -- TODO: handle internal references and potentially do other things as well
-  return description:gsub("\n", "  \n")
+  -- TODO: notes and examples
+  return resolve_all_links(description:gsub("\n", "  \n"))
 end
 
 ---expects the current position to be a newline\
@@ -127,8 +229,7 @@ end
 ---@param see_also string[]|nil @ references to members of other classes
 local function convert_description_sub_see_also(description, subclasses, see_also)
   if type(description) == "table" then
-    ---@type ApiSubSeeAlso
-    local sub_see_also = description
+    local sub_see_also = description ---@type ApiSubSeeAlso
     description = sub_see_also.description
     subclasses = sub_see_also.subclasses
     see_also = sub_see_also.see_also
@@ -152,7 +253,7 @@ local function convert_description_sub_see_also(description, subclasses, see_als
     result[#result+1] = "### See also\n"
       ---@param ref string
       ..table.concat(linq.select(see_also, function(ref)
-        return "- "..resolve_internal_reference(ref, ref)
+        return "- "..resolve_internal_reference(ref)
       end), "\n")
   end
 
@@ -220,31 +321,31 @@ local function convert_type(api_type)
   else
     ---@type ApiComplexType
     api_type = api_type
-    if api_type.type == "array" then
+    if api_type.complex_type == "array" then
       return convert_type(api_type.value).."[]"
-    elseif api_type.type == "dictionary" then
+    elseif api_type.complex_type == "dictionary" then
       return "table<"..convert_type(api_type.key)
         ..","..convert_type(api_type.value)..">"
-    elseif api_type.type == "variant" then
+    elseif api_type.complex_type == "variant" then
       local converted_options = {}
       for i, option in ipairs(api_type.options) do
         converted_options[i] = convert_type(option)
       end
       return table.concat(converted_options, "|")
-    elseif api_type.type == "LazyLoadedValue" then
+    elseif api_type.complex_type == "LazyLoadedValue" then
       -- EmmyLua/sumneko.lua do not support generic type classes
       return "LuaLazyLoadedValue<"..convert_type(api_type.value)..",nil>"
-    elseif api_type.type == "CustomDictionary" then
+    elseif api_type.complex_type == "CustomDictionary" then
       return "LuaCustomTable<"..convert_type(api_type.key)
         ..","..convert_type(api_type.value)..">"
-    elseif api_type.type == "CustomArray" then
+    elseif api_type.complex_type == "CustomArray" then
       return "LuaCustomTable<integer,"..convert_type(api_type.value)..">"
-    elseif api_type.type == "function" then
+    elseif api_type.complex_type == "function" then
       ---@param v string
       return "fun("..table.concat(linq.select(api_type.parameters, function(v) return to_id(v)..":"..to_id(v) end), ",")..")"
     else
-      print("Unable to convert complex type `"..api_type.type.."` "..serpent.line(api_type, {comment = false})..".")
-      return api_type.type
+      print("Unable to convert complex type `"..api_type.complex_type.."` "..serpent.line(api_type, {comment = false})..".")
+      return api_type.complex_type
     end
   end
 end
@@ -747,7 +848,9 @@ end
 local function generate(_args, _data)
   args = _args
   data = _data
+  populate_luts()
   valid_target_files = {}
+  api_base_url = "https://lua-api.factorio.com/"..(data.api_version == "???" and "latest" or data.api_version).."/"
   generate_basics()
   generate_defines()
   generate_events()
@@ -758,7 +861,11 @@ local function generate(_args, _data)
   delete_invalid_files_from_target()
   args = nil
   data = nil
+  class_name_lut = nil
+  event_name_lut = nil
+  define_name_lut = nil
   valid_target_files = nil
+  api_base_url = nil
 end
 
 return {

@@ -8,10 +8,10 @@
         "file": "main.lua",
       },
       "args": [
-        "--source-file", "source_data/api.json",
+        "--source-file", "source_data/runtime-api.json",
         "--target-dir", "output",
         "--cache-dir", "cache",
-        "--debug-api-json-crc", "2533182349.0",
+        "--debug-api-json-crc", "806684638.0",
       ],
     },
   ]

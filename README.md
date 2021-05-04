@@ -8,10 +8,10 @@ public repo and you weren't a collaborator. Thank you!
 
 # running the script
 
-Put the source data file in `source_data/api.json`.
+Put the source data file in `source_data/runtime-api.json`.
 Then run this in the root directory of the project:
 ```
-./lua main.lua -- --source-file source_data/api.json --target-dir output
+./lua main.lua -- --source-file source_data/runtime-api.json --target-dir output
 ```
 (for some reason git bash wants that `./` at the start. Idk why.)
 
