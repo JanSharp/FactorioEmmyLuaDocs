@@ -562,8 +562,12 @@ local function generate_classes()
         end
       end
 
+      local view_documentation_link = view_documentation(class.name.."::"..method.name)
       for _, custom_parameter in ipairs(custom_parameters) do
-        add(convert_description(custom_parameter.description))
+        add(convert_description(
+          extend_string{str = custom_parameter.description, post = "\n\n"}
+            ..view_documentation_link
+        ))
         add("---@field "..custom_parameter.name.." "..convert_type(custom_parameter.type))
         add((custom_parameter.optional and "|nil\n" or "\n"))
       end
