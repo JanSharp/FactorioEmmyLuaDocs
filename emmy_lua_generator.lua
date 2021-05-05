@@ -137,7 +137,7 @@ local function resolve_internal_reference(reference, display_name)
   elseif define_name_lut[reference] then
     relative_link = "defines.html#"..reference
   else
-    local class_name, member_name = reference:match("^(.-)::(.-)$") ---@type string
+    local class_name, member_name = reference:match("^(.-)::(.*)$") ---@type string
     if class_name then
       relative_link = class_name..".html#"..class_name.."."..member_name
     elseif reference:find("Filters$") then
@@ -151,7 +151,7 @@ local function resolve_internal_reference(reference, display_name)
     end
   end
   if not relative_link then
-    print("Unresolved internal reference `"..reference.."`. Missing hardcoded concept?")
+    print("Unresolved internal reference `"..reference.."`. Missing hardcoded concept in concept_names.lua?")
     relative_link = "UnresolvedInternalReference"
   end
   return "["..(display_name or reference).."]("..runtime_api_base_url..relative_link..")"
@@ -165,7 +165,7 @@ local function resolve_link(link, display_name)
     or link:find("^https://")
   then
     return "["..(display_name or link).."]("..link..")"
-  elseif  link:find("%.html$")
+  elseif link:find("%.html$")
     or link:find("%.html#")
   then
     return "["..(display_name or link).."]("..runtime_api_base_url..link..")"
