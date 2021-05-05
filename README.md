@@ -30,14 +30,14 @@ To validate the cache is up to date the script stores the crc32 of the source fi
 and checks that against the source file every time it runs.
 Calculating the crc32 of said source file takes even longer than loading the json file
 with the debugger enabled.
-That's why `--debug-api-json-crc` exists. It bypasses calculating the crc32 and just
+That's why `--debug-runtime-api-json-crc` exists. It bypasses calculating the crc32 and just
 uses what you give it.
 Then we are left with just loading the cache file which is nearly instant even with
 the debugger enabled.
-This means if you are debugging and using `--debug-api-json-crc` you need to remove
+This means if you are debugging and using `--debug-runtime-api-json-crc` you need to remove
 that whenever you change the source file, let it parse the source file and write the
 new data to the cache as well as the new crc32. Then copy that crc32 from the file in
-the cache dir and use that for `--debug-api-json-crc` again.
+the cache dir and use that for `--debug-runtime-api-json-crc` again.
 The End.
 
 # Libs

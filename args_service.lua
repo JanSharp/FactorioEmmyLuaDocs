@@ -6,7 +6,7 @@ local Path = require("path")
 ---@field source_path Path
 ---@field cache_dir_path Path|nil
 ---@field target_dir_path Path
----@field debug_api_json_crc number|nil
+---@field debug_runtime_api_json_crc number|nil
 
 ---@param arg string[]
 ---@return Args
@@ -74,7 +74,7 @@ local function get_args(arg)
   single("source_file")
   single("cache_dir")
   single("target_dir")
-  single("debug_api_json_crc")
+  single("debug_runtime_api_json_crc")
 
   args.source_path = Path.new(args.source_file)
   args.source_file = nil
@@ -84,7 +84,7 @@ local function get_args(arg)
   end
   args.target_dir_path = Path.new(args.target_dir)
   args.target_dir = nil
-  args.debug_api_json_crc = args.debug_api_json_crc and tonumber(args.debug_api_json_crc)
+  args.debug_runtime_api_json_crc = args.debug_runtime_api_json_crc and tonumber(args.debug_runtime_api_json_crc)
 
   return args
 end

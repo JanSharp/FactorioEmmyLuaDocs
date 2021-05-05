@@ -12,7 +12,7 @@ local class_name_lut ---@type table<string, boolean>
 local event_name_lut ---@type table<string, boolean>
 local define_name_lut ---@type table<string, boolean>
 local valid_target_files ---@type table<string, boolean>
-local api_base_url ---@type string
+local runtime_api_base_url ---@type string
 
 local file_prefix = "---@meta\n---@diagnostic disable\n"
 
@@ -155,7 +155,7 @@ local function resolve_internal_reference(reference, display_name)
       relative_link = "Concepts.html#"..reference
     end
   end
-  return "["..(display_name or reference).."]("..api_base_url..relative_link..")"
+  return "["..(display_name or reference).."]("..runtime_api_base_url..relative_link..")"
 end
 
 ---@param link string
@@ -169,7 +169,7 @@ local function resolve_link(link, display_name)
   elseif  link:find("%.html$")
     or link:find("%.html#")
   then
-    return "["..(display_name or link).."]("..api_base_url..link..")"
+    return "["..(display_name or link).."]("..runtime_api_base_url..link..")"
   else
     return resolve_internal_reference(link, display_name)
   end
@@ -850,7 +850,7 @@ local function generate(_args, _data)
   data = _data
   populate_luts()
   valid_target_files = {}
-  api_base_url = "https://lua-api.factorio.com/"..(data.api_version == "???" and "latest" or data.api_version).."/"
+  runtime_api_base_url = "https://lua-api.factorio.com/"..(data.api_version == "???" and "latest" or data.api_version).."/"
   generate_basics()
   generate_defines()
   generate_events()
@@ -865,7 +865,7 @@ local function generate(_args, _data)
   event_name_lut = nil
   define_name_lut = nil
   valid_target_files = nil
-  api_base_url = nil
+  runtime_api_base_url = nil
 end
 
 return {
