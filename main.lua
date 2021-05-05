@@ -13,7 +13,7 @@ if not args.source_path:exists() then return end
 local api_json --- @type string
 local function get_api_json()
   if not api_json then
-    api_json = file.read_all_text(args.source_path):gsub("<br/>", "\\n")
+    api_json = file.read_all_text(args.source_path)
   end
   return api_json
 end

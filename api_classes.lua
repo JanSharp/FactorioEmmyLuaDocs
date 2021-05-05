@@ -14,7 +14,7 @@
 ---since every list is sorted alphabetically, in order to use data in the order it is\
 ---used for the html docs you must use this order property to sort the list
 ---@field notes string[]|nil
----@field examples string[][]|nil
+---@field examples string[]|nil
 ---@field order integer
 
 ---@alias ApiType ApiBasicType|ApiComplexType
