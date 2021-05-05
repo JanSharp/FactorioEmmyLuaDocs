@@ -46,6 +46,8 @@ though it may just be `blueprint entity` and `blueprint tile`
 
 create_entity has poor examples in terms of code practice, see `game.forces.player`.
 
+what to do about defines.prototypes
+
 some code used to test which descriptions are empty strings and which are null to reprsent "no description":
 ```lua
 -- for _, class in ipairs(api_data.classes) do

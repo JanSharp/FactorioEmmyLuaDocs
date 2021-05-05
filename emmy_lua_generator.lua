@@ -16,6 +16,7 @@ local runtime_api_base_url ---@type string
 
 local file_prefix = "---@meta\n---@diagnostic disable\n"
 
+---@type table<string, boolean>
 local builtin_type_name_lut = {
   ["float"] = true,
   ["double"] = true,
@@ -28,6 +29,129 @@ local builtin_type_name_lut = {
   ["string"] = true,
   ["boolean"] = true,
   ["table"] = true,
+}
+
+---@type string[]
+local concept_names = {
+  "LocalisedString",
+  "DisplayResolution",
+  "PersonalLogisticParameters",
+  "Position",
+  "ChunkPosition",
+  "TilePosition",
+  "ChunkPositionAndArea",
+  "GuiLocation",
+  "GuiAnchor",
+  "OldTileAndPosition",
+  "Tags",
+  "SmokeSource",
+  "Vector",
+  "BoundingBox",
+  "ScriptArea",
+  "ScriptPosition",
+  "Color",
+  "ColorModifier",
+  "PathFindFlags",
+  "MapViewSettings",
+  "MapSettings",
+  "DifficultySettings",
+  "MapExchangeStringData",
+  "Fluid",
+  "Ingredient",
+  "Product",
+  "Loot",
+  "Modifier",
+  "Offer",
+  "AutoplaceSpecification",
+  "NoiseExpression",
+  "Resistances",
+  "MapGenSize",
+  "AutoplaceSettings",
+  "CliffPlacementSettings",
+  "MapGenSettings",
+  "SignalID",
+  "Signal",
+  "UpgradeFilter",
+  "InfinityInventoryFilter",
+  "InfinityPipeFilter",
+  "HeatSetting",
+  "FluidBoxConnection",
+  "ArithmeticCombinatorParameters",
+  "ConstantCombinatorParameters",
+  "ComparatorString",
+  "DeciderCombinatorParameters",
+  "CircuitCondition",
+  "CircuitConditionSpecification",
+  "Filter",
+  "PlaceAsTileResult",
+  "RaiseEventParameters",
+  "SimpleItemStack",
+  "Command",
+  "PathfindFlags",
+  "FluidSpecification",
+  "ForceSpecification",
+  "TechnologySpecification",
+  "SurfaceSpecification",
+  "PlayerSpecification",
+  "ItemStackSpecification",
+  "EntityPrototypeSpecification",
+  "ItemPrototypeSpecification",
+  "WaitCondition",
+  "TrainScheduleRecord",
+  "TrainSchedule",
+  "GuiArrowSpecification",
+  "AmmoType",
+  "BeamTarget",
+  "RidingState",
+  "SpritePath",
+  "SoundPath",
+  "ModConfigurationChangedData",
+  "ConfigurationChangedData",
+  "EffectValue",
+  "Effects",
+  "EntityPrototypeFlags",
+  "ItemPrototypeFlags",
+  "CollisionMaskLayer",
+  "CollisionMask",
+  "CollisionMaskWithFlags",
+  "TriggerTargetMask",
+  "TriggerEffectItem",
+  "TriggerDelivery",
+  "TriggerItem",
+  "Trigger",
+  "AttackParameters",
+  "CapsuleAction",
+  "SelectionModeFlags",
+  "LogisticFilter",
+  "ModSetting",
+  "Any",
+  "ProgrammableSpeakerParameters",
+  "ProgrammableSpeakerAlertParameters",
+  "ProgrammableSpeakerCircuitParameters",
+  "ProgrammableSpeakerInstrument",
+  "Alignment",
+  "NthTickEvent",
+  "ScriptRenderTarget",
+  "MouseButtonFlags",
+  "CursorBoxRenderType",
+  "ForceCondition",
+  "RenderLayer",
+  "CliffOrientation",
+  "ItemStackLocation",
+  "VehicleAutomaticTargetingParameters",
+  "SoundType",
+  "ItemPrototypeFilters",
+  "ModSettingPrototypeFilters",
+  "TechnologyPrototypeFilters",
+  "DecorativePrototypeFilters",
+  "AchievementPrototypeFilters",
+  "FluidPrototypeFilters",
+  "EquipmentPrototypeFilters",
+  "TilePrototypeFilters",
+  "RecipePrototypeFilters",
+  "EntityPrototypeFilters",
+  "GameViewSettings",
+  "TileProperties",
 }
 
 ---@param name string
@@ -187,6 +311,10 @@ local function resolve_all_links(str)
   end
   parts[#parts+1] = str:sub(prev_finish)
   return table.concat(parts)
+end
+
+local function view_documentation(reference)
+  return resolve_internal_reference(reference, "View documentation")
 end
 
 ---@param description string
@@ -373,12 +501,18 @@ local function generate_defines()
   local function add_define(define, name_prefix)
     -- every define name and value name is expected to be a valid identifier
     local name = name_prefix..define.name
-    add(convert_description(define.description))
+    add(convert_description(
+      extend_string{str = define.description, post = "\n\n"}
+        ..view_documentation(name)
+    ))
     add("---@class "..name.."\n"..name.."={\n")
     name_prefix = name.."."
     if define.values then
       for _, value in ipairs(define.values) do
-        add(convert_description(value.description))
+        add(convert_description(
+          extend_string{str = value.description, post = "\n\n"}
+            ..view_documentation(name.."."..value.name)
+        ))
         add(to_id(value.name).."=0,\n")
       end
     end
@@ -405,10 +539,16 @@ local function generate_events()
   end
   add(file_prefix)
   for _, event in ipairs(data.events) do
-    add(convert_description(event.description))
+    add(convert_description(
+      extend_string{str = event.description, post = "\n\n"}
+        ..view_documentation(event.name)
+    ))
     add("---@class "..event.name.."\n")
     for _, param in ipairs(event.data) do
-      add(convert_description(param.description))
+      add(convert_description(
+        extend_string{str = param.description, post = "\n\n"}
+          ..view_documentation(event.name)
+      ))
       add("---@field "..param.name.." "..convert_type(param.type))
       add((param.optional and "|nil" or "").."\n")
     end
@@ -441,7 +581,9 @@ local function generate_classes()
     local function add_attribute(attribute)
       add(convert_description_sub_see_also(
         "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
-        ..extend_string{pre = "\n", str = attribute.description},
+        ..extend_string{pre = "\n", str = attribute.description}
+        .."\n\n"
+        ..view_documentation(class.name.."::"..attribute.name),
 
         attribute.subclasses,
         attribute.see_also
@@ -478,8 +620,19 @@ local function generate_classes()
 
 
     ---@param method ApiMethod
+    local function convert_description_for_method(method)
+      return convert_description_sub_see_also(
+        extend_string{str = method.description, post = "\n\n"}
+          ..view_documentation(class.name.."::"..method.name),
+        method.subclasses,
+        method.see_also
+      )
+    end
+
+
+    ---@param method ApiMethod
     local function add_regular_method(method)
-      add(convert_description_sub_see_also(method))
+      add(convert_description_for_method(method))
 
       ---@type ApiParameter[]
       local sorted_parameters = sort_by_order(method.parameters)
@@ -552,7 +705,7 @@ local function generate_classes()
       end
 
       add("\n") -- blank line needed to break apart the description for the class fields and the method
-      add(convert_description_sub_see_also(method))
+      add(convert_description_for_method(method))
       add("---@param param "..param_class_name.."\n")
       add_return_annotation(method)
       add(method.name.."=function(param)end,\n")
@@ -561,7 +714,12 @@ local function generate_classes()
 
 
     add(file_prefix)
-    add(convert_description_sub_see_also(class))
+    add(convert_description_sub_see_also(
+      extend_string{str = class.description, post = "\n\n"}
+        ..view_documentation(class.name),
+      class.subclasses,
+      class.see_also
+    ))
     add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
 
     for _, attribute in ipairs(class.attributes) do
@@ -602,125 +760,20 @@ local function generate_basics()
 end
 
 local function generate_concepts()
-  write_file_to_target("concepts.lua", file_prefix..[[
----@class LocalisedString
----@class DisplayResolution
----@class PersonalLogisticParameters
----@class Position
----@class ChunkPosition
----@class TilePosition
----@class ChunkPositionAndArea
----@class GuiLocation
----@class GuiAnchor
----@class OldTileAndPosition
----@class Tags
----@class SmokeSource
----@class Vector
----@class BoundingBox
----@class ScriptArea
----@class ScriptPosition
----@class Color
----@class ColorModifier
----@class PathFindFlags
----@class MapViewSettings
----@class MapSettings
----@class DifficultySettings
----@class MapExchangeStringData
----@class Fluid
----@class Ingredient
----@class Product
----@class Loot
----@class Modifier
----@class Offer
----@class AutoplaceSpecification
----@class NoiseExpression
----@class Resistances
----@class MapGenSize
----@class AutoplaceSettings
----@class CliffPlacementSettings
----@class MapGenSettings
----@class SignalID
----@class Signal
----@class UpgradeFilter
----@class InfinityInventoryFilter
----@class InfinityPipeFilter
----@class HeatSetting
----@class FluidBoxConnection
----@class ArithmeticCombinatorParameters
----@class ConstantCombinatorParameters
----@class ComparatorString
----@class DeciderCombinatorParameters
----@class CircuitCondition
----@class CircuitConditionSpecification
----@class Filter
----@class PlaceAsTileResult
----@class RaiseEventParameters
----@class SimpleItemStack
----@class Command
----@class PathfindFlags
----@class FluidSpecification
----@class ForceSpecification
----@class TechnologySpecification
----@class SurfaceSpecification
----@class PlayerSpecification
----@class ItemStackSpecification
----@class EntityPrototypeSpecification
----@class ItemPrototypeSpecification
----@class WaitCondition
----@class TrainScheduleRecord
----@class TrainSchedule
----@class GuiArrowSpecification
----@class AmmoType
----@class BeamTarget
----@class RidingState
----@class SpritePath
----@class SoundPath
----@class ModConfigurationChangedData
----@class ConfigurationChangedData
----@class EffectValue
----@class Effects
----@class EntityPrototypeFlags
----@class ItemPrototypeFlags
----@class CollisionMaskLayer
----@class CollisionMask
----@class CollisionMaskWithFlags
----@class TriggerTargetMask
----@class TriggerEffectItem
----@class TriggerDelivery
----@class TriggerItem
----@class Trigger
----@class AttackParameters
----@class CapsuleAction
----@class SelectionModeFlags
----@class LogisticFilter
----@class ModSetting
----@class Any
----@class ProgrammableSpeakerParameters
----@class ProgrammableSpeakerAlertParameters
----@class ProgrammableSpeakerCircuitParameters
----@class ProgrammableSpeakerInstrument
----@class Alignment
----@class NthTickEvent
----@class ScriptRenderTarget
----@class MouseButtonFlags
----@class CursorBoxRenderType
----@class ForceCondition
----@class RenderLayer
----@class CliffOrientation
----@class ItemStackLocation
----@class VehicleAutomaticTargetingParameters
----@class SoundType
----@class ItemPrototypeFilters
----@class ModSettingPrototypeFilters
----@class TechnologyPrototypeFilters
----@class DecorativePrototypeFilters
----@class AchievementPrototypeFilters
----@class FluidPrototypeFilters
----@class EquipmentPrototypeFilters
----@class TilePrototypeFilters
----@class RecipePrototypeFilters
----@class EntityPrototypeFilters
+  local result = {}
+  local c = 0
+  ---@param part string
+  local function add(part)
+    c = c + 1
+    result[c] = part
+  end
 
+  for _, concept_name in ipairs(concept_names) do
+    add(convert_description(view_documentation(concept_name)))
+    add("---@class "..concept_name.."\n")
+  end
+
+  local special = "\n"..convert_description(view_documentation("GameViewSettings"))..[[
 ---@class GameViewSettings
 ---@field show_controller_gui boolean [RW] Show the controller GUI elements.
 ---@field show_minimap boolean [RW] Show the chart in the upper right-hand corner of the screen.
@@ -734,13 +787,16 @@ local function generate_concepts()
 ---@field show_quickbar boolean [RW] Shows or hides quickbar of shortcuts.
 ---@field show_shortcut_bar boolean [RW] Shows or hides the shortcut bar.
 
+]]..convert_description(view_documentation("TileProperties"))..[[
 ---@class TileProperties
 ---@field tier_from_start double [RW]
 ---@field roughness double [RW]
 ---@field elevation double [RW]
 ---@field available_water double [RW]
 ---@field temperature double [RW]
-]])
+]]
+
+  write_file_to_target("concepts.lua", file_prefix..table.concat(result)..special)
 end
 
 local function generate_custom()
@@ -850,6 +906,7 @@ local function generate(_args, _data)
   data = _data
   populate_luts()
   valid_target_files = {}
+  -- HACK: api_version "???" treated as "latest"
   runtime_api_base_url = "https://lua-api.factorio.com/"..(data.api_version == "???" and "latest" or data.api_version).."/"
   generate_basics()
   generate_defines()
