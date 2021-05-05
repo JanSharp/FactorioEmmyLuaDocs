@@ -2,6 +2,7 @@
 
 ---@class ApiFormat
 ---@field application "factorio"
+---@field stage "runtime"
 ---@field api_version string
 ---@field api_format_version number
 ---@field classes ApiClass[]
