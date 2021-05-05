@@ -775,8 +775,10 @@ local function generate_concepts()
   end
 
   for _, concept_name in ipairs(concept_names) do
-    add(convert_description(view_documentation(concept_name)))
-    add("---@class "..concept_name.."\n")
+    if not (concept_name == "GameViewSettings" or concept_name == "TileProperties") then
+      add(convert_description(view_documentation(concept_name)))
+      add("---@class "..concept_name.."\n")
+    end
   end
 
   local special = "\n"..convert_description(view_documentation("GameViewSettings"))..[[
