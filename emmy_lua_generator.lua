@@ -11,6 +11,7 @@ local data ---@type ApiFormat
 local class_name_lut ---@type table<string, boolean>
 local event_name_lut ---@type table<string, boolean>
 local define_name_lut ---@type table<string, boolean>
+local concept_name_lut ---@type table<string, boolean>
 local valid_target_files ---@type table<string, boolean>
 local runtime_api_base_url ---@type string
 
@@ -228,6 +229,7 @@ local function populate_luts()
   end
   class_name_lut = linq.to_dict(data.classes, name_selector)
   event_name_lut = linq.to_dict(data.events, name_selector)
+  concept_name_lut = linq.to_dict(concept_names, function(name) return name end) ---@type string
 
   define_name_lut = {}
   ---@param define ApiDefine
@@ -272,12 +274,16 @@ local function resolve_internal_reference(reference, display_name)
     elseif reference:find("Filters$") then
       if reference:find("^Lua") then
         relative_link = "Event-Filters.html#"..reference
-      else
+      elseif concept_name_lut[reference] then -- the other types of filters are just concepts
         relative_link = "Concepts.html#"..reference
       end
-    else
+    elseif concept_name_lut[reference] then
       relative_link = "Concepts.html#"..reference
     end
+  end
+  if not relative_link then
+    print("Unresolved internal reference `"..reference.."`. Missing hardcoded concept?")
+    relative_link = "UnresolvedInternalReference"
   end
   return "["..(display_name or reference).."]("..runtime_api_base_url..relative_link..")"
 end
@@ -921,6 +927,7 @@ local function generate(_args, _data)
   class_name_lut = nil
   event_name_lut = nil
   define_name_lut = nil
+  concept_name_lut = nil
   valid_target_files = nil
   runtime_api_base_url = nil
 end
