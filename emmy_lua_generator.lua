@@ -1,159 +1,27 @@
 
----@type LFS
-local lfs = require("lfs")
+local lfs = require("lfs") ---@type LFS
 local file = require("file")
+local Path = require("path")
 local serpent = require("serpent")
 local linq = require("linq")
 
+local lua_keywords = require("lua_keywords")
+local globals_map = require("globals_map")
+local concept_names = require("concept_names")
+local builtin_type_names = require("builtin_type_names")
 
 local args ---@type Args
 local data ---@type ApiFormat
 local class_name_lut ---@type table<string, boolean>
 local event_name_lut ---@type table<string, boolean>
 local define_name_lut ---@type table<string, boolean>
+local builtin_type_name_lut ---@type table<string, boolean>
 local concept_name_lut ---@type table<string, boolean>
 local valid_target_files ---@type table<string, boolean>
 local runtime_api_base_url ---@type string
 
 local file_prefix = "---@meta\n---@diagnostic disable\n"
 
----@type table<string, boolean>
-local builtin_type_name_lut = {
-  ["float"] = true,
-  ["double"] = true,
-  ["int"] = true,
-  ["int8"] = true,
-  ["uint"] = true,
-  ["uint8"] = true,
-  ["uint16"] = true,
-  ["uint64"] = true,
-  ["string"] = true,
-  ["boolean"] = true,
-  ["table"] = true,
-}
-
----@type string[]
-local concept_names = {
-  "LocalisedString",
-  "DisplayResolution",
-  "PersonalLogisticParameters",
-  "Position",
-  "ChunkPosition",
-  "TilePosition",
-  "ChunkPositionAndArea",
-  "GuiLocation",
-  "GuiAnchor",
-  "OldTileAndPosition",
-  "Tags",
-  "SmokeSource",
-  "Vector",
-  "BoundingBox",
-  "ScriptArea",
-  "ScriptPosition",
-  "Color",
-  "ColorModifier",
-  "PathFindFlags",
-  "MapViewSettings",
-  "MapSettings",
-  "DifficultySettings",
-  "MapExchangeStringData",
-  "Fluid",
-  "Ingredient",
-  "Product",
-  "Loot",
-  "Modifier",
-  "Offer",
-  "AutoplaceSpecification",
-  "NoiseExpression",
-  "Resistances",
-  "MapGenSize",
-  "AutoplaceSettings",
-  "CliffPlacementSettings",
-  "MapGenSettings",
-  "SignalID",
-  "Signal",
-  "UpgradeFilter",
-  "InfinityInventoryFilter",
-  "InfinityPipeFilter",
-  "HeatSetting",
-  "FluidBoxConnection",
-  "ArithmeticCombinatorParameters",
-  "ConstantCombinatorParameters",
-  "ComparatorString",
-  "DeciderCombinatorParameters",
-  "CircuitCondition",
-  "CircuitConditionSpecification",
-  "Filter",
-  "PlaceAsTileResult",
-  "RaiseEventParameters",
-  "SimpleItemStack",
-  "Command",
-  "PathfindFlags",
-  "FluidSpecification",
-  "ForceSpecification",
-  "TechnologySpecification",
-  "SurfaceSpecification",
-  "PlayerSpecification",
-  "ItemStackSpecification",
-  "EntityPrototypeSpecification",
-  "ItemPrototypeSpecification",
-  "WaitCondition",
-  "TrainScheduleRecord",
-  "TrainSchedule",
-  "GuiArrowSpecification",
-  "AmmoType",
-  "BeamTarget",
-  "RidingState",
-  "SpritePath",
-  "SoundPath",
-  "ModConfigurationChangedData",
-  "ConfigurationChangedData",
-  "EffectValue",
-  "Effects",
-  "EntityPrototypeFlags",
-  "ItemPrototypeFlags",
-  "CollisionMaskLayer",
-  "CollisionMask",
-  "CollisionMaskWithFlags",
-  "TriggerTargetMask",
-  "TriggerEffectItem",
-  "TriggerDelivery",
-  "TriggerItem",
-  "Trigger",
-  "AttackParameters",
-  "CapsuleAction",
-  "SelectionModeFlags",
-  "LogisticFilter",
-  "ModSetting",
-  "Any",
-  "ProgrammableSpeakerParameters",
-  "ProgrammableSpeakerAlertParameters",
-  "ProgrammableSpeakerCircuitParameters",
-  "ProgrammableSpeakerInstrument",
-  "Alignment",
-  "NthTickEvent",
-  "ScriptRenderTarget",
-  "MouseButtonFlags",
-  "CursorBoxRenderType",
-  "ForceCondition",
-  "RenderLayer",
-  "CliffOrientation",
-  "ItemStackLocation",
-  "VehicleAutomaticTargetingParameters",
-  "SoundType",
-  "ItemPrototypeFilters",
-  "ModSettingPrototypeFilters",
-  "TechnologyPrototypeFilters",
-  "DecorativePrototypeFilters",
-  "AchievementPrototypeFilters",
-  "FluidPrototypeFilters",
-  "EquipmentPrototypeFilters",
-  "TilePrototypeFilters",
-  "RecipePrototypeFilters",
-  "EntityPrototypeFilters",
-  "GameViewSettings",
-  "TileProperties",
-}
 
 ---@param name string
 ---@param text string
@@ -223,15 +91,16 @@ end
 ---requires data to be set already
 local function populate_luts()
   ---@param name ApiName
-  ---@return string
-  local name_selector = function(name)
-    return name.name
-  end
+  local function name_selector(name) return name.name end
+  ---@param name string
+  local function basic_name_selector(name) return name end
+
   class_name_lut = linq.to_dict(data.classes, name_selector)
   event_name_lut = linq.to_dict(data.events, name_selector)
-  concept_name_lut = linq.to_dict(concept_names, function(name) return name end) ---@type string
+  concept_name_lut = linq.to_dict(concept_names, basic_name_selector)
+  builtin_type_name_lut = linq.to_dict(builtin_type_names, basic_name_selector)
 
-  define_name_lut = {}
+  define_name_lut = {defines = true}
   ---@param define ApiDefine
   ---@param name_prefix string
   local function add_define(define, name_prefix)
@@ -306,6 +175,7 @@ local function resolve_link(link, display_name)
 end
 
 ---@param str string
+---@return string
 local function resolve_all_links(str)
   local parts = {} ---@type string[]
   local prev_finish = 1
@@ -319,6 +189,8 @@ local function resolve_all_links(str)
   return table.concat(parts)
 end
 
+---@param reference string
+---@return string
 local function view_documentation(reference)
   return resolve_internal_reference(reference, "View documentation")
 end
@@ -394,42 +266,16 @@ local function convert_description_sub_see_also(description, subclasses, see_als
   return convert_description(table.concat(result, "\n\n"))
 end
 
----@type string[]
-local keywords = {
-  "and",
-  "break",
-  "do",
-  "else",
-  "elseif",
-  "end",
-  "false",
-  "for",
-  "function",
-  "goto",
-  "if",
-  "in",
-  "local",
-  "nil",
-  "not",
-  "or",
-  "repeat",
-  "return",
-  "then",
-  "true",
-  "until",
-  "while",
-}
----@type table<string, string>
-local keyword_map = {}
-for _, keyword in ipairs(keywords) do
-  keyword_map[keyword] = keyword.."_"
+local escaped_keyword_map = {} ---@type table<string, string>
+for _, keyword in ipairs(lua_keywords) do
+  escaped_keyword_map[keyword] = keyword.."_"
 end
 
 ---adds an `_` if the given string is a lua keyword
 ---@param str string
 ---@return string
 local function escape_keyword(str)
-  local escaped_keyword = keyword_map[str]
+  local escaped_keyword = escaped_keyword_map[str]
   return escaped_keyword and escaped_keyword or str
 end
 
@@ -440,6 +286,14 @@ local function to_id(str)
   str = str:gsub("[^a-zA-Z0-9_]", "_")
   str = str:find("^[0-9]") and "_"..str or str
   return escape_keyword(str)
+end
+
+---get eitehr `local <to_id(doc_type_name)>` or `<global_name_for_this_type>` using globals_map
+---@param doc_type_name string @ for example "LuaGameScript", "LuaEntity" or "defines", etc...
+---@return string
+local function get_local_or_global(doc_type_name)
+  local global_name = globals_map[doc_type_name]
+  return global_name and global_name or "local "..to_id(doc_type_name)
 end
 
 ---@param api_type ApiType
@@ -501,7 +355,11 @@ local function generate_defines()
     c = c + 1
     result[c] = part
   end
-  add(file_prefix.."---@class defines\ndefines={}\n")
+
+  add(file_prefix)
+  add(convert_description(view_documentation("defines")))
+  add("---@class defines\n")
+  add(get_local_or_global("defines").."={}\n")
   ---@param define ApiDefine
   ---@param name_prefix string
   local function add_define(define, name_prefix)
@@ -736,7 +594,7 @@ local function generate_classes()
       end
     end
 
-    add("local "..to_id(class.name).."={\n")
+    add(get_local_or_global(class.name).."={\n")
     for _, method in ipairs(class.methods) do
       if method.name:find("^operator") then -- TODO: operators
         -- print(class.name.."::"..method.name)
@@ -752,19 +610,6 @@ local function generate_classes()
   end
 end
 
-local function generate_basics()
-  write_file_to_target("basic.lua", file_prefix..[[
----@class float : number
----@class double : number
----@class int : number
----@class int8 : number
----@class uint : number
----@class uint8 : number
----@class uint16 : number
----@class uint64 : number
-]])
-end
-
 local function generate_concepts()
   local result = {}
   local c = 0
@@ -774,6 +619,8 @@ local function generate_concepts()
     result[c] = part
   end
 
+  add(file_prefix)
+
   for _, concept_name in ipairs(concept_names) do
     if not (concept_name == "GameViewSettings" or concept_name == "TileProperties") then
       add(convert_description(view_documentation(concept_name)))
@@ -781,7 +628,8 @@ local function generate_concepts()
     end
   end
 
-  local special = "\n"..convert_description(view_documentation("GameViewSettings"))..[[
+  add(convert_description(view_documentation("GameViewSettings")))
+  add([[
 ---@class GameViewSettings
 ---@field show_controller_gui boolean [RW] Show the controller GUI elements.
 ---@field show_minimap boolean [RW] Show the chart in the upper right-hand corner of the screen.
@@ -794,117 +642,49 @@ local function generate_concepts()
 ---@field show_map_view_options boolean [RW] Shows or hides the view options when map is opened.
 ---@field show_quickbar boolean [RW] Shows or hides quickbar of shortcuts.
 ---@field show_shortcut_bar boolean [RW] Shows or hides the shortcut bar.
+]])
 
-]]..convert_description(view_documentation("TileProperties"))..[[
+  add(convert_description(view_documentation("TileProperties")))
+  add([[
 ---@class TileProperties
 ---@field tier_from_start double [RW]
 ---@field roughness double [RW]
 ---@field elevation double [RW]
 ---@field available_water double [RW]
 ---@field temperature double [RW]
-]]
+]])
 
-  write_file_to_target("concepts.lua", file_prefix..table.concat(result)..special)
+  write_file_to_target("concepts.lua", table.concat(result))
+end
+
+local function generate_builtin()
+  local result = {}
+  local c = 0
+  ---@param part string
+  local function add(part)
+    c = c + 1
+    result[c] = part
+  end
+
+  add(file_prefix)
+
+  for _, builtin_type_name in ipairs(builtin_type_names) do
+    if not (
+      builtin_type_name == "string"
+      or builtin_type_name == "boolean"
+      or builtin_type_name == "table"
+    )
+    then
+      add(convert_description(view_documentation(builtin_type_name)))
+      add("---@class "..builtin_type_name..":number\n")
+    end
+  end
+
+  write_file_to_target("builtin.lua", table.concat(result))
 end
 
 local function generate_custom()
-  write_file_to_target("custom.lua", file_prefix..[[
----on_script_path_request_finished
----@class Waypoint
-
----script_raised_set_tiles
----
----LuaSurface.set_tile param tiles
----@class Tile
-
----LuaBootstrap.on_event param event
----@class Event
-
----LuaBootstrap.on_event param filters
----
----LuaBootstrap.set_event_filters param filters
----@class Filters
-
----LuaControl.crafting_queue
----@class CraftingQueueItem
-
----LuaControl.get_blueprint_entities
----
----LuaItemStack.get_blueprint_entities return
----
----LuaItemStack.set_blueprint_entities param entities
----@class blueprint-entity
-
----LuaItemStack.get_blueprint_tiles return
----
----LuaItemStack.set_blueprint_tiles param tiles
----@class blueprint-tile
-
----LuaEntity.circuit_connection_definitions
----@class CircuitConnectionDefinition
-
----LuaEntityPrototype.result_units
----@class UnitSpawnDefinition
-
----LuaGameScript.map_gen_presets
----@class MapGenPreset
-
----LuaGuiElement.elem_filters
----
----LuaGuiElement.add param field elem_filters
----@class PrototypeFilters
-
----LuaGuiElement.tabs
----@class TabAndContent
-
----LuaHeatEnergySourcePrototype.connections
----@class Connection
-
----LuaItemStack.blueprint_icons
----
----LuaItemStack.default_icons
----@class Icon
-
----LuaLazyLoadedValue.get return
----@class varies
-
----LuaPlayer.get_alerts return
----@class alert
-
----LuaRemote.call param ...
----@class variadic
-
----LuaRemote.call return
----@class Anything
-
----LuaRendering.draw_polygon param field vertices
----@class CustomScriptRenderTarget
-
----LuaSurface.create_decoratives param field decoratives
----@class Decorative
-
----LuaSurface.find_decoratives_filtered return
----@class DecorativeResult
-]])
-end
-
-local function generate_globals()
-  write_file_to_target("globals.lua", file_prefix..[[
----@type LuaGameScript
-game = {}
----@type LuaBootstrap
-script = {}
----@type LuaRemote
-remote = {}
----@type LuaCommandProcessor
-commands = {}
----@type LuaSettings
-settings = {}
----@type LuaRCON
-rcon = {}
----@type LuaRendering
-rendering = {}
-]])
+  write_file_to_target("custom.lua", file_prefix..file.read_all_text(Path.new("custom.lua")))
 end
 
 ---@param _args Args
@@ -916,13 +696,12 @@ local function generate(_args, _data)
   valid_target_files = {}
   -- HACK: api_version "???" treated as "latest"
   runtime_api_base_url = "https://lua-api.factorio.com/"..(data.api_version == "???" and "latest" or data.api_version).."/"
-  generate_basics()
+  generate_builtin()
   generate_defines()
   generate_events()
   generate_classes()
   generate_concepts()
   generate_custom()
-  generate_globals()
   delete_invalid_files_from_target()
   args = nil
   data = nil
