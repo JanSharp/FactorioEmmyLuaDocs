@@ -52,6 +52,9 @@ not sure what i think about AnyBasic being used for Tags. I mean it's not wrong,
 Actually i know what i think. It's not accurate because tags specifically only allow
 tables with strings as their keys, AnyBasic does not have that restriction.
 
+Draft:
+Looking through the diffs i noticed you changed the description for `game.table_to_json` and/or `game.json_to_table` and i also noticed you're using AnyBasic for it, which is funny, because last i checked it's correct that it actually works with any basic type, not just tables, but the description says it's tables and the name implies the same.
+
 some code used to test which descriptions are empty strings and which are null to reprsent "no description":
 ```lua
 -- for _, class in ipairs(api_data.classes) do
