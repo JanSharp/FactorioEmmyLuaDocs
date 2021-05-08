@@ -321,12 +321,10 @@ local function convert_type(api_type)
     return "any"
   end
   if type(api_type) == "string" then
-    ---@type string
-    api_type = api_type
+    ---@narrow api_type string
     return api_type == "function" and "fun()" or api_type:gsub(" ", "-")
   else
-    ---@type ApiComplexType
-    api_type = api_type
+    ---@narrow api_type ApiComplexType
     if api_type.complex_type == "array" then
       return convert_type(api_type.value).."[]"
     elseif api_type.complex_type == "dictionary" then
