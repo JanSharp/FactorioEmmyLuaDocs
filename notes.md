@@ -48,6 +48,10 @@ create_entity has poor examples in terms of code practice, see `game.forces.play
 
 what to do about defines.prototypes
 
+not sure what i think about AnyBasic being used for Tags. I mean it's not wrong, i guess.
+Actually i know what i think. It's not accurate because tags specifically only allow
+tables with strings as their keys, AnyBasic does not have that restriction.
+
 some code used to test which descriptions are empty strings and which are null to reprsent "no description":
 ```lua
 -- for _, class in ipairs(api_data.classes) do

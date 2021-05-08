@@ -1,4 +1,7 @@
 
+-- This list is no longer accurate but i don't consider it worth keeping it up to date
+-- until all or most of the concepts/adhoc types are dealt with/done
+
 ---on_script_path_request_finished
 ---@class Waypoint
 
@@ -75,3 +78,28 @@
 
 ---LuaSurface.find_decoratives_filtered return
 ---@class DecorativeResult
+
+-- The rest are intentional:
+
+---Any basic type, so like `any` but without LuaObjects.\
+---This is also usesd for what we usually know as the Tags concept.
+---@class AnyBasic
+
+-- new ones that are probably new concepts that i don't have access to
+-- so there are no comments with their locations
+
+---@class PathfinderWaypoint
+---@class EventData
+---@class NthTickEventData
+---@class BlueprintEntity
+---@class CircuitConnectionSpecification
+---@class FluidBoxFilter
+---@class FluidBoxFilterSpec
+---@class ChartTagSpec
+---@class HeatConnection
+---@class BlueprintSignalIcon
+---@class BlueprintItemIcon
+---@class Alert
+---@class CutsceneWaypoint
+---@class InserterCircuitConditions
+---@class TechnologyModifier
