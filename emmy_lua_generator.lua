@@ -216,8 +216,41 @@ end
 ---@param description string
 ---@return string
 local function preprocess_description(description)
-  -- TODO: notes and examples
-  return resolve_all_links(description:gsub("\n", "  \n"))
+  local function escape_single_newlines(str)
+    return resolve_all_links(str:gsub("([^\n])\n([^\n])", function(pre, post)
+      return pre.."  \n"..post
+    end))
+  end
+  if description:find("```") then
+    local result = {}
+    local c = 0
+    ---@param part string
+    local function add(part)
+      c = c + 1
+      result[c] = part
+    end
+    local prev_finish = 1
+    local in_code_block = false
+    ---@param part string
+    local function add_code_or_str(part)
+      if in_code_block then
+        add(part)
+      else
+        add(escape_single_newlines(part))
+      end
+    end
+    ---@type number
+    for start, finish in description:gmatch("()```()") do
+      add_code_or_str(description:sub(prev_finish, start - 1))
+      add("```")
+      in_code_block = not in_code_block
+      prev_finish = finish
+    end
+    add_code_or_str(description:sub(prev_finish))
+    return table.concat(result)
+  else
+    return escape_single_newlines(description)
+  end
 end
 
 ---expects the current position to be a newline\
@@ -282,6 +315,28 @@ local function convert_description_sub_see_also(description, subclasses, see_als
   end
 
   return convert_description(table.concat(result, "\n\n"))
+end
+
+---@param notes? string[]
+---@return string @ empty if notes are nil
+local function format_notes(notes)
+  if not notes then
+    return ""
+  end
+  return "**Notes:**\n"..table.concat(linq.select(notes, function(note)
+    return "- "..note
+  end), "\n")
+end
+
+---@param examples? string[]
+---@return string @ empty if examples is nil
+local function format_examples(examples)
+  if not examples then
+    return ""
+  end
+  return table.concat(linq.select(examples, function(example)
+    return "### Example\n"..example
+  end), "\n\n")
 end
 
 local escaped_keyword_map = {} ---@type table<string, string>
@@ -421,7 +476,9 @@ local function generate_events()
   for _, event in ipairs(data.events) do
     add(convert_description(
       extend_string{str = event.description, post = "\n\n"}
+        ..extend_string{str = format_notes(event.notes), post = "\n\n"}
         ..view_documentation(event.name)
+        ..extend_string{pre = "\n\n", str = format_examples(event.examples)}
     ))
     add("---@class "..event.name.."\n")
     for _, param in ipairs(event.data) do
@@ -463,7 +520,9 @@ local function generate_classes()
         "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
         ..extend_string{pre = "\n", str = attribute.description}
         .."\n\n"
-        ..view_documentation(class.name.."::"..attribute.name),
+        ..extend_string{str = format_notes(attribute.notes), post = "\n\n"}
+        ..view_documentation(class.name.."::"..attribute.name)
+        ..extend_string{pre = "\n\n", str = format_examples(attribute.examples)},
 
         attribute.subclasses,
         attribute.see_also
@@ -503,7 +562,9 @@ local function generate_classes()
     local function convert_description_for_method(method)
       return convert_description_sub_see_also(
         extend_string{str = method.description, post = "\n\n"}
-          ..view_documentation(class.name.."::"..method.name),
+          ..extend_string{str = format_notes(method.notes), post = "\n\n"}
+          ..view_documentation(class.name.."::"..method.name)
+          ..extend_string{pre = "\n\n", str = format_examples(method.examples)},
         method.subclasses,
         method.see_also
       )
@@ -600,7 +661,9 @@ local function generate_classes()
     add(file_prefix)
     add(convert_description_sub_see_also(
       extend_string{str = class.description, post = "\n\n"}
-        ..view_documentation(class.name),
+        ..extend_string{str = format_notes(class.notes), post = "\n\n"}
+        ..view_documentation(class.name)
+        ..extend_string{pre = "\n\n", str = format_examples(class.examples)},
       class.subclasses,
       class.see_also
     ))
