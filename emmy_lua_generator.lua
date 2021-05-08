@@ -20,8 +20,26 @@ local concept_name_lut ---@type table<string, boolean>
 local valid_target_files ---@type table<string, boolean>
 local runtime_api_base_url ---@type string
 
-local file_prefix = "---@meta\n---@diagnostic disable\n"
+local file_prefix
 
+local function set_file_prefix()
+  file_prefix = "--##\n" -- ignored by sumneko.lua plugin https://github.com/JanSharp/FactorioSumnekoLuaPlugin#help-it-broke
+    .."---@meta\n" -- "ignored" by sumneko.lua https://github.com/sumneko/lua-language-server/wiki/EmmyLua-Annotations#meta
+  if args.disable_specific_diagnostics then
+    file_prefix = file_prefix
+      ..table.concat(
+        linq.select(
+          args.disable_specific_diagnostics,
+          function(v)
+            return "---@diagnostic disable:"..v.."\n"
+          end
+        )
+      )
+  else
+    file_prefix = file_prefix.."---@diagnostic disable\n"
+  end
+  file_prefix = file_prefix.."\n"
+end
 
 ---@param name string
 ---@param text string
@@ -152,7 +170,7 @@ local function resolve_internal_reference(reference, display_name)
   end
   if not relative_link then
     print("Unresolved internal reference `"..reference.."`. Missing hardcoded concept in concept_names.lua?")
-    relative_link = "UnresolvedInternalReference"
+    relative_link = "Unresolved_"..reference
   end
   return "["..(display_name or reference).."]("..runtime_api_base_url..relative_link..")"
 end
@@ -695,6 +713,7 @@ end
 ---@param _data ApiFormat
 local function generate(_args, _data)
   args = _args
+  set_file_prefix()
   data = _data
   populate_luts()
   valid_target_files = {}
@@ -708,6 +727,7 @@ local function generate(_args, _data)
   generate_custom()
   delete_invalid_files_from_target()
   args = nil
+  file_prefix = nil
   data = nil
   class_name_lut = nil
   event_name_lut = nil

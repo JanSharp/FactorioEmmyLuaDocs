@@ -7,6 +7,7 @@ local Path = require("path")
 ---@field cache_dir_path Path|nil
 ---@field target_dir_path Path
 ---@field debug_runtime_api_json_crc number|nil
+---@field disable_specific_diagnostics string[]
 
 ---@param arg string[]
 ---@return Args

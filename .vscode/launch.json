@@ -12,6 +12,7 @@
         "--target-dir", "output",
         "--cache-dir", "cache",
         "--debug-runtime-api-json-crc", "2576567368.0",
+        "--disable-specific-diagnostics", "trailing-space",
       ],
     },
   ]
