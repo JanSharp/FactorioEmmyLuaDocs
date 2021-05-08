@@ -323,9 +323,9 @@ local function format_notes(notes)
   if not notes then
     return ""
   end
-  return "**Notes:**\n"..table.concat(linq.select(notes, function(note)
-    return "- "..note
-  end), "\n")
+  return table.concat(linq.select(notes, function(note)
+    return "**Note:**: "..note
+  end), "\n\n")
 end
 
 ---@param examples? string[]
