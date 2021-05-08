@@ -1,8 +1,8 @@
 ---@meta
 
 ---@class ApiFormat
----@field application "factorio"
----@field stage "runtime"
+---@field application '"factorio"'
+---@field stage '"runtime"'
 ---@field api_version string
 ---@field api_format_version number
 ---@field classes ApiClass[]
@@ -14,34 +14,36 @@
 ---@field description string
 ---since every list is sorted alphabetically, in order to use data in the order it is\
 ---used for the html docs you must use this order property to sort the list
----@field notes string[]|nil
----@field examples string[]|nil
 ---@field order integer
 
----@alias ApiType ApiBasicType|ApiComplexType
----@alias ApiBasicType string
----@class ApiComplexType
----@field complex_type "array"|"dictionary"|"variant"|"CustomArray"|"CustomDictionary"|"function"|string
----@field key ApiType|nil @ used for "dictionary"|"CustomDictionary" and other
----@field value ApiType|nil @ used for "array"|"dictionary"|"CustomArray"|"CustomDictionary" and other
----@field options ApiType[]|nil @ used for "variant"
----@field parameters string[]|nil @ used for "function"
+---@class ApiNotesAndExamples : ApiName
+---@field notes string[]|nil
+---@field examples string[]|nil
 
 ---@class ApiSubSeeAlso : ApiName
 ---@field subclasses string[]|nil @ which subclasses this can be used on
 ---@field see_also string[]|nil @ references to members of other classes
 
----@class ApiClass : ApiSubSeeAlso
+---@alias ApiType ApiBasicType|ApiComplexType
+---@alias ApiBasicType string
+---@class ApiComplexType
+---@field complex_type '"array"'|'"dictionary"'|'"variant"'|'"CustomArray"'|'"CustomDictionary"'|'"function"'|string
+---@field key ApiType|nil @ used for "dictionary"|"CustomDictionary" and other
+---@field value ApiType|nil @ used for "array"|"dictionary"|"CustomArray"|"CustomDictionary" and other
+---@field options ApiType[]|nil @ used for "variant"
+---@field parameters string[]|nil @ used for "function"
+
+---@class ApiClass : ApiSubSeeAlso, ApiNotesAndExamples
 ---@field methods ApiMethod[]
 ---@field attributes ApiAttribute[]
 ---@field base_classes string[]|nil
 
----@class ApiAttribute : ApiSubSeeAlso
+---@class ApiAttribute : ApiSubSeeAlso, ApiNotesAndExamples
 ---@field type ApiType
 ---@field read boolean
 ---@field write boolean
 
----@class ApiMethod : ApiSubSeeAlso
+---@class ApiMethod : ApiSubSeeAlso, ApiNotesAndExamples
 ---@field takes_table boolean
 ---@field parameters ApiParameter[]
 ---type specific parameters\
@@ -66,5 +68,5 @@
 ---@field values ApiName[]|nil
 ---@field subkeys ApiDefine[]|nil
 
----@class ApiEvent : ApiName
+---@class ApiEvent : ApiName, ApiNotesAndExamples
 ---@field data ApiParameter[]
