@@ -22,6 +22,15 @@ if you have them overwritten that is, still include `./?.dll` and `./?.lua` resp
 (one being for c path the other for regular lua path thing. also use the right separators
 for your system, on windows it shouldn't matter i believe.)
 
+## Arguments
+
+- `--source-file` (Required) Relative or full path of the source json file including name and extension.
+- `--target-dir` (Required) Relative or full path of the dir all generated files will be stored in.
+- `--cache-dir` Relative or full path of the dir cache files will be stored in/read from. Cache automatically gets invalidated if the source file is different using the crc32 of said file. If ommited no caching takes place.
+- `--disable-specific-diagnostics` By default all diagnostics get disabled in all generated files in the hopes of that improving performance. If that is not desired you may define this followed by any number of strings defining which diagnostics to disable. If there are 0 given, no diagnostics get disabled, however you most definitely want to disable `trailing-space` at the very least because that is currently used for linebreaks in the markdown descriptions.\
+  Since There should be zero other infos, warnings or errors in the generated files this argument is mostly considered useful for debugging.
+- `--debug-runtime-api-json-crc` See "Story about debugging and cache".
+
 # Story about debugging and cache
 
 The debugger makes loading the json file take several seconds, maybe even a minute.
@@ -62,5 +71,4 @@ If you want the submodule you can do something like this iirc:
 git submodule init
 git submodule update
 ```
-But i'm pretty sure i'm not even using anything the plugin provides. I just added it at the start
-because i thought i'd want to use it.
+But i hardly use anything the plugin provides. I think a few `---@typelist` or `---@narrow` annotations here and there.
