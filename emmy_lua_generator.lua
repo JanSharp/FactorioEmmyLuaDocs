@@ -182,12 +182,15 @@ local function resolve_link(link, display_name)
   if link:find("^http://")
     or link:find("^https://")
   then
+    -- link is already an escaped url to my knowledge
     return "["..(display_name or link).."]("..link..")"
   elseif link:find("%.html$")
     or link:find("%.html#")
   then
+    -- same here
     return "["..(display_name or link).."]("..runtime_api_base_url..link..")"
   else
+    -- but not in this case
     return resolve_internal_reference(link, display_name)
   end
 end
@@ -521,7 +524,8 @@ local function generate_classes()
         ..extend_string{pre = "\n", str = attribute.description}
         .."\n\n"
         ..extend_string{str = format_notes(attribute.notes), post = "\n\n"}
-        ..view_documentation(class.name.."::"..attribute.name)
+        ---@diagnostic disable-next-line: undefined-field
+        ..view_documentation(class.name.."::"..(attribute.html_doc_name or attribute.name))
         ..extend_string{pre = "\n\n", str = format_examples(attribute.examples)},
 
         attribute.subclasses,
@@ -563,7 +567,8 @@ local function generate_classes()
       return convert_description_sub_see_also(
         extend_string{str = method.description, post = "\n\n"}
           ..extend_string{str = format_notes(method.notes), post = "\n\n"}
-          ..view_documentation(class.name.."::"..method.name)
+          ---@diagnostic disable-next-line: undefined-field
+          ..view_documentation(class.name.."::"..(method.html_doc_name or method.name))
           ..extend_string{pre = "\n\n", str = format_examples(method.examples)},
         method.subclasses,
         method.see_also
@@ -657,6 +662,16 @@ local function generate_classes()
     end
 
 
+    ---@param method ApiMethod
+    local function add_method(method)
+      if method.takes_table then
+        add_method_taking_table(method)
+      else
+        add_regular_method(method)
+      end
+    end
+
+
 
     add(file_prefix)
     add(convert_description_sub_see_also(
@@ -670,8 +685,20 @@ local function generate_classes()
     add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
 
     for _, attribute in ipairs(class.attributes) do
-      if attribute.name:find("^operator") then -- TODO: operators
-        -- print(class.name.."::"..attribute.name)
+      if attribute.name:find("^operator") then
+        local attribute_copy = linq.copy(attribute) ---@type ApiAttribute
+        -- urls are stupid, and the factorio api site also does things i haven't seen before
+        -- so i'm just doing this here because it's simple and everything works the way it is
+        attribute_copy.html_doc_name = attribute.name:gsub(" ", "%%20")
+        if attribute.name:find("#$") then
+          attribute_copy.name = "__len"
+          add_attribute(attribute_copy)
+        elseif attribute.name:find("%[%]$") then
+          attribute_copy.name = "__index"
+          add_attribute(attribute_copy)
+        else
+          print("Unknown attribute operator `"..class.name.."::"..attribute.name.."`.")
+        end
       else
         add_attribute(attribute)
       end
@@ -679,12 +706,18 @@ local function generate_classes()
 
     add(get_local_or_global(class.name).."={\n")
     for _, method in ipairs(class.methods) do
-      if method.name:find("^operator") then -- TODO: operators
-        -- print(class.name.."::"..method.name)
-      elseif method.takes_table then
-        add_method_taking_table(method)
+      if method.name:find("^operator") then
+        local method_copy = linq.copy(method) ---@type ApiMethod
+        -- see note about urls above in the attributes loop
+        method_copy.html_doc_name = method.name:gsub(" ", "%%20")
+        if method.name:find("%(%)$") then
+          method_copy.name = "__call"
+          add_method(method_copy)
+        else
+          print("Unknown method operator `"..class.name.."::"..method.name.."`.")
+        end
       else
-        add_regular_method(method)
+        add_method(method)
       end
     end
     add("}")
