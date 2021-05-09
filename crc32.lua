@@ -132,7 +132,6 @@ local _crc_table3 = {
 ---@return integer @ The CRC-32 checksum, which is greater or equal to 0,
 ---and less than 2^32 (4294967296).
 local function crc32(str, init_value)
-	-- TODO: Check argument
 	local crc = (init_value or 0) % 4294967296
 	if not _xor8_table then
 		GenerateXorTable()

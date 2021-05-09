@@ -40,10 +40,6 @@ There are currently 3 different operators:
 attributes with the names `operator #` and `operator []`
 and methods with the name `operator ()`
 
-LuaControl::get_blueprint_entities return type has a space in it
--- TODO: check how many types have spaces in them
-though it may just be `blueprint entity` and `blueprint tile`
-
 create_entity has poor examples in terms of code practice, see `game.forces.player`.
 
 what to do about defines.prototypes
