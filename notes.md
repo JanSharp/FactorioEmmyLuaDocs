@@ -30,3 +30,5 @@ what to do about defines.prototypes
 not quite sure, but i don't think it really benefits much to have the entire list
 be part of the machine readable format or the html docs at all, because the entire
 point is to be able to use the prototype hirachy without knowing what it actually is.
+
+can a `complex_type` `function` have `ApiComplexType` parameters?
