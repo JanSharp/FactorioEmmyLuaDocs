@@ -718,40 +718,40 @@ local function generate_classes()
     ))
     add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
 
+    for _, operator in ipairs(class.operators) do
+      if operator.name ~= "index"
+        and operator.name ~= "length"
+        and operator.name ~= "call"
+      then
+        print("Unknown operator `"..operator.name.."` in class `"..class.name.."`.")
+      end
+    end
+
     for _, attribute in ipairs(class.attributes) do
-      if attribute.name:find("^operator") then
-        local attribute_copy = linq.copy(attribute) ---@type ApiAttribute
-        -- urls are stupid, and the factorio api site also does things i haven't seen before
-        -- so i'm just doing this here because it's simple and everything works the way it is
-        attribute_copy.html_doc_name = attribute.name:gsub(" ", "%%20")
-        if attribute.name:find("#$") then
-          attribute_copy.name = "__len"
-          add_attribute(attribute_copy)
-        elseif attribute.name:find("%[%]$") then
-          attribute_copy.name = "__index"
-          add_attribute(attribute_copy)
-        else
-          print("Unknown attribute operator `"..class.name.."::"..attribute.name.."`.")
-        end
-      else
-        add_attribute(attribute)
+      add_attribute(attribute)
+    end
+
+    for _, operator in ipairs(class.operators) do
+      if operator.name == "index" or operator.name == "length" then
+        local operator_copy = linq.copy(operator) ---@type ApiAttributeOperator
+        operator_copy.name = operator.name == "index" and "__index" or "__len"
+        operator_copy.html_doc_name = "operator%20"
+          ..(operator.name == "index" and "[]" or "#") -- HACK
+        add_attribute(operator_copy)
       end
     end
 
     add(get_local_or_global(class.name).."={\n")
     for _, method in ipairs(class.methods) do
-      if method.name:find("^operator") then
-        local method_copy = linq.copy(method) ---@type ApiMethod
-        -- see note about urls above in the attributes loop
-        method_copy.html_doc_name = method.name:gsub(" ", "%%20")
-        if method.name:find("%(%)$") then
-          method_copy.name = "__call"
-          add_method(method_copy)
-        else
-          print("Unknown method operator `"..class.name.."::"..method.name.."`.")
-        end
-      else
-        add_method(method)
+      add_method(method)
+    end
+
+    for _, operator in ipairs(class.operators) do
+      if operator.name == "call" then
+        local operator_copy = linq.copy(operator) ---@type ApiMethodOperator
+        operator_copy.name = "__call"
+        operator_copy.html_doc_name = "operator%20()" -- HACK
+        add_method(operator_copy)
       end
     end
     add("}")
