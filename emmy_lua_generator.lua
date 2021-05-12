@@ -395,14 +395,15 @@ local function convert_type(api_type)
         converted_options[i] = convert_type(option)
       end
       return table.concat(converted_options, "|")
-    elseif api_type.complex_type == "LazyLoadedValue" then
+    elseif api_type.complex_type == "LuaLazyLoadedValue" then
       -- EmmyLua/sumneko.lua do not support generic type classes
       return "LuaLazyLoadedValue<"..convert_type(api_type.value)..",nil>"
-    elseif api_type.complex_type == "CustomDictionary" then
+    elseif api_type.complex_type == "LuaCustomTable" then
       return "LuaCustomTable<"..convert_type(api_type.key)
         ..","..convert_type(api_type.value)..">"
-    elseif api_type.complex_type == "CustomArray" then
-      return "LuaCustomTable<integer,"..convert_type(api_type.value)..">"
+    elseif api_type.complex_type == "table" then
+      print("table!")
+      return "table"
     elseif api_type.complex_type == "function" then
       ---@param v string
       return "fun("..table.concat(linq.select(api_type.parameters, function(v) return to_id(v)..":"..to_id(v) end), ",")..")"
@@ -835,3 +836,5 @@ end
 return {
   generate = generate,
 }
+
+-- fix semantics
