@@ -8,7 +8,6 @@ local linq = require("linq")
 local lua_keywords = require("lua_keywords")
 local globals_map = require("globals_map")
 local concept_names = require("concept_names")
-local builtin_type_names = require("builtin_type_names")
 
 local args ---@type Args
 local data ---@type ApiFormat
@@ -117,7 +116,7 @@ local function populate_luts()
   class_name_lut = linq.to_dict(data.classes, name_selector)
   event_name_lut = linq.to_dict(data.events, name_selector)
   concept_name_lut = linq.to_dict(concept_names, basic_name_selector)
-  builtin_type_name_lut = linq.to_dict(builtin_type_names, basic_name_selector)
+  builtin_type_name_lut = linq.to_dict(data.builtin_types, name_selector)
 
   define_name_lut = {defines = true}
   ---@param define ApiDefine
@@ -786,15 +785,18 @@ local function generate_builtin()
 
   add(file_prefix)
 
-  for _, builtin_type_name in ipairs(builtin_type_names) do
+  for _, builtin_type in ipairs(data.builtin_types) do
     if not (
-      builtin_type_name == "string"
-      or builtin_type_name == "boolean"
-      or builtin_type_name == "table"
+      builtin_type.name == "string"
+      or builtin_type.name == "boolean"
+      or builtin_type.name == "table"
     )
     then
-      add(convert_description(view_documentation(builtin_type_name)))
-      add("---@class "..builtin_type_name..":number\n")
+      add(convert_description(
+        extend_string{str = builtin_type.description, post = "\n\n"}
+          ..view_documentation(builtin_type.name)
+      ))
+      add("---@class "..builtin_type.name..":number\n")
     end
   end
 
