@@ -147,6 +147,7 @@ local result = {
   "ScriptRenderVertexTarget",
   "InventoryFilter",
   "PathfinderFlags",
+  "EquipmentPoint",
 }
 
 return result

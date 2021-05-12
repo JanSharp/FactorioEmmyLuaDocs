@@ -107,7 +107,7 @@ local function extend_string(param)
   end
 end
 
-local convert_type
+local format_type
 
 ---requires data to be set already
 local function populate_luts_and_maps()
@@ -123,7 +123,10 @@ local function populate_luts_and_maps()
   builtin_type_name_lut = linq.to_dict(data.builtin_types, name_selector)
 
   globals_map = linq.to_dict(data.global_variables, function(g)
-    return convert_type(g.type)
+    return format_type(g.type, function()
+      print("Complex table type is not supported for global variable `"..g.name.."`.")
+      return "not_supported", "not_supported"
+    end)
   end)
 
   define_name_lut = {defines = true}
@@ -388,49 +391,134 @@ local function try_get_global_description(doc_type_name)
   return global and global.description or ""
 end
 
----@param api_type ApiType
-function convert_type(api_type)
-  if not api_type then
-    -- print("Attempting to convert type where `api_type` is nil.")
-    return "any"
+---@param add fun(part: string)
+---@param type_data ApiTableTypeFields
+---@param table_class_name string
+---@param view_documentation_link string
+---@return string table_class_name
+local function add_table_type(add, type_data, table_class_name, view_documentation_link)
+  add(convert_description(view_documentation_link))
+  add("---@class "..table_class_name.."\n")
+
+  ---@type table<string, ApiParameter>
+  local custom_parameter_map = {}
+  ---@type ApiParameter[]
+  local custom_parameters = {}
+
+  ---@typelist integer, ApiParameter
+  for i, parameter in ipairs(sort_by_order(type_data.parameters)) do
+    local custom_parameter = linq.copy(parameter)
+    custom_parameter_map[custom_parameter.name] = custom_parameter
+    custom_parameters[i] = custom_parameter
   end
-  if type(api_type) == "string" then
-    ---@narrow api_type string
-    return api_type == "function" and "fun()" or api_type:gsub(" ", "-")
-  else
-    ---@narrow api_type ApiComplexType
-    if api_type.complex_type == "array" then
-      return convert_type(api_type.value).."[]"
-    elseif api_type.complex_type == "dictionary" then
-      return "table<"..convert_type(api_type.key)
-        ..","..convert_type(api_type.value)..">"
-    elseif api_type.complex_type == "variant" then
-      local converted_options = {}
-      for i, option in ipairs(api_type.options) do
-        converted_options[i] = convert_type(option)
+
+  if type_data.variant_parameter_groups then
+    -- there is no good place for method.variant_parameter_description sadly
+    for _, group in ipairs(type_data.variant_parameter_groups) do
+      for _, parameter in ipairs(group.parameters) do
+
+        local custom_description = "Applies to **"..group.name.."**: "
+          ..(parameter.optional and "(optional)" or "(required)")
+          ..extend_string{pre = "\n", str = parameter.description}
+
+        local custom_parameter = custom_parameter_map[parameter.name]
+        if custom_parameter then
+          custom_parameter.description = extend_string{
+            str = custom_parameter.description, post = "\n\n"
+          }..custom_description
+        else
+          custom_parameter = linq.copy(parameter)
+          custom_parameter.description = custom_description
+          custom_parameter_map[parameter.name] = custom_parameter
+          custom_parameters[#custom_parameters+1] = custom_parameter
+        end
+
       end
-      return table.concat(converted_options, "|")
-    elseif api_type.complex_type == "LuaLazyLoadedValue" then
-      -- EmmyLua/sumneko.lua do not support generic type classes
-      return "LuaLazyLoadedValue<"..convert_type(api_type.value)..",nil>"
-    elseif api_type.complex_type == "LuaCustomTable" then
-      -- sumneko.lua doesn't actually support generic typed classes
-      -- so whenever it finds a type in the format of `type<key, value>`
-      -- that type gets the special treatment like `table<key, value>` would,
-      -- which makes it work in for loops and with indexing for example
-      -- which happens to work perfectly with LuaCustomTable
-      return "LuaCustomTable<"..convert_type(api_type.key)
-        ..","..convert_type(api_type.value)..">"
-    elseif api_type.complex_type == "table" then
-      print("table!")
-      return "table"
-    elseif api_type.complex_type == "function" then
-      ---@param v string
-      return "fun("..table.concat(linq.select(api_type.parameters, function(v) return to_id(v)..":"..to_id(v) end), ",")..")"
-    else
-      print("Unable to convert complex type `"..api_type.complex_type.."` "..serpent.line(api_type, {comment = false})..".")
-      return api_type.complex_type
     end
+  end
+
+  for _, custom_parameter in ipairs(custom_parameters) do
+    add(convert_description(
+      extend_string{str = custom_parameter.description, post = "\n\n"}
+        ..view_documentation_link
+    ))
+    add("---@field "..custom_parameter.name.." "..format_type(custom_parameter.type))
+    add((custom_parameter.optional and "|nil\n" or "\n"))
+  end
+
+  return table_class_name
+end
+
+local generate_table_types
+do
+  local result = {nil}
+  local c = 1 -- leave [1] nil for file_prefix later on
+  ---@param part string
+  local function add(part)
+    c = c + 1
+    result[c] = part
+  end
+
+  ---@param api_type ApiType
+  ---@param get_table_name_and_view_doc_link fun(): string, string @
+  ---get `table_class_name` and `view_documentation_link` for
+  ---`add_table_type` if `api_type` is a `table` `complex_type`
+  function format_type(api_type, get_table_name_and_view_doc_link)
+    ---@param table_name_appended_str string
+    local function modify_getter(table_name_appended_str)
+      return function()
+        local table_class_name, view_documentation_link = get_table_name_and_view_doc_link()
+        return table_class_name..table_name_appended_str, view_documentation_link
+      end
+    end
+    if not api_type then
+      print("Attempting to convert type where `api_type` is nil.")
+      return "any"
+    end
+    if type(api_type) == "string" then
+      ---@narrow api_type string
+      return api_type == "function" and "fun()" or api_type:gsub(" ", "-")
+    else
+      ---@narrow api_type ApiComplexType
+      if api_type.complex_type == "array" then
+        return format_type(api_type.value, get_table_name_and_view_doc_link).."[]"
+      elseif api_type.complex_type == "dictionary" then
+        return "table<"..format_type(api_type.key, modify_getter("_key"))
+          ..","..format_type(api_type.value, modify_getter("_value"))..">"
+      elseif api_type.complex_type == "variant" then
+        local converted_options = {}
+        for i, option in ipairs(api_type.options) do
+          converted_options[i] = format_type(option, modify_getter("."..i))
+        end
+        return table.concat(converted_options, "|")
+      elseif api_type.complex_type == "LuaLazyLoadedValue" then
+        -- EmmyLua/sumneko.lua do not support generic type classes
+        return "LuaLazyLoadedValue<"..format_type(api_type.value, get_table_name_and_view_doc_link)..",nil>"
+      elseif api_type.complex_type == "LuaCustomTable" then
+        -- sumneko.lua doesn't actually support generic typed classes
+        -- so whenever it finds a type in the format of `type<key, value>`
+        -- that type gets the special treatment like `table<key, value>` would,
+        -- which makes it work in for loops and with indexing for example
+        -- which happens to work perfectly with LuaCustomTable
+        return "LuaCustomTable<"..format_type(api_type.key, modify_getter("_key"))
+          ..","..format_type(api_type.value, modify_getter("_value"))..">"
+      elseif api_type.complex_type == "table" then
+        return add_table_type(add, api_type, get_table_name_and_view_doc_link())
+      elseif api_type.complex_type == "function" then
+        ---@param v string
+        return "fun("..table.concat(linq.select(api_type.parameters, function(v) return to_id(v)..":"..to_id(v) end), ",")..")"
+      else
+        print("Unable to convert complex type `"..api_type.complex_type.."` "..serpent.line(api_type, {comment = false})..".")
+        return api_type.complex_type
+      end
+    end
+  end
+
+  function generate_table_types()
+    result[1] = file_prefix
+    write_file_to_target("table_types.lua", table.concat(result))
+    result = nil
+    c = nil
   end
 end
 
@@ -438,9 +526,10 @@ end
 ---does everything needed for param or return annotations
 ---@param api_type ApiType
 ---@param description string
+---@param get_table_name_and_view_doc_link fun(): string, string
 ---@return string
-local function convert_param_or_return(api_type, description)
-  return convert_type(api_type)..convert_param_or_return_description(description)
+local function convert_param_or_return(api_type, description, get_table_name_and_view_doc_link)
+  return format_type(api_type, get_table_name_and_view_doc_link)..convert_param_or_return_description(description)
 end
 
 local function generate_defines()
@@ -507,11 +596,14 @@ local function generate_events()
     ))
     add("---@class "..event.name.."\n")
     for _, param in ipairs(event.data) do
+      local view_doc_link = view_documentation(event.name)
       add(convert_description(
         extend_string{str = param.description, post = "\n\n"}
-          ..view_documentation(event.name)
+          ..view_doc_link
       ))
-      add("---@field "..param.name.." "..convert_type(param.type))
+      add("---@field "..param.name.." "..format_type(param.type, function()
+        return event.name.."."..param.name, view_doc_link
+      end))
       add((param.optional and "|nil" or "").."\n")
     end
   end
@@ -541,24 +633,36 @@ local function generate_classes()
 
     ---@param attribute ApiAttribute
     local function add_attribute(attribute)
+      ---@diagnostic disable-next-line: undefined-field
+      local view_doc_link = view_documentation(class.name.."::"..(attribute.html_doc_name or attribute.name))
       add(convert_description_sub_see_also(
         "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
         ..extend_string{pre = "\n", str = attribute.description}
         .."\n\n"
         ..extend_string{str = format_notes(attribute.notes), post = "\n\n"}
-        ---@diagnostic disable-next-line: undefined-field
-        ..view_documentation(class.name.."::"..(attribute.html_doc_name or attribute.name))
+        ..view_doc_link
         ..extend_string{pre = "\n\n", str = format_examples(attribute.examples)},
 
         attribute.subclasses,
         attribute.see_also
       ))
-      add("---@field "..attribute.name.." "..convert_type(attribute.type).."\n")
+      add("---@field "..attribute.name.." "..format_type(attribute.type, function()
+        return class.name.."."..attribute.name, view_doc_link
+      end).."\n")
+    end
+
+    ---@param method ApiMethod
+    local function view_documentation_for_method(method)
+      ---@diagnostic disable-next-line: undefined-field
+      return view_documentation(class.name.."::"..(method.html_doc_name or method.name))
     end
 
     ---@param parameter ApiParameter
-    local function add_vararg_annotation(parameter)
-      add("---@vararg "..convert_type(parameter.type).."\n")
+    ---@param method ApiMethod
+    local function add_vararg_annotation(parameter, method)
+      add("---@vararg "..format_type(parameter.type, function()
+        return class.name.."."..method.name.."_vararg", view_documentation_for_method(method)
+      end).."\n")
       if parameter.description ~= "" then
         local description = "\n**vararg**:"
         if is_single_line(parameter.description) then
@@ -571,17 +675,23 @@ local function generate_classes()
     end
 
     ---@param parameter ApiParameter
-    local function add_param_annontation(parameter)
+    ---@param method ApiMethod
+    local function add_param_annontation(parameter, method)
       add("---@param "..escape_keyword(parameter.name)..(parameter.optional and "?" or " "))
-      add(convert_param_or_return(parameter.type, parameter.description))
+      add(convert_param_or_return(parameter.type, parameter.description, function()
+        return class.name.."."..method.name.."."..parameter.name, view_documentation_for_method(method)
+      end))
     end
 
     ---@param method ApiMethod
     local function add_return_annotation(method)
       if method.return_type then
-        add("---@return "..convert_param_or_return(method.return_type, method.return_description))
+        add("---@return "..convert_param_or_return(method.return_type, method.return_description, function()
+          return class.name.."."..method.name.."_return", view_documentation_for_method(method)
+        end))
       end
     end
+
 
 
     ---@param method ApiMethod
@@ -589,8 +699,7 @@ local function generate_classes()
       return convert_description_sub_see_also(
         extend_string{str = method.description, post = "\n\n"}
           ..extend_string{str = format_notes(method.notes), post = "\n\n"}
-          ---@diagnostic disable-next-line: undefined-field
-          ..view_documentation(class.name.."::"..(method.html_doc_name or method.name))
+          ..view_documentation_for_method(method)
           ..extend_string{pre = "\n\n", str = format_examples(method.examples)},
         method.subclasses,
         method.see_also
@@ -627,55 +736,7 @@ local function generate_classes()
     ---@param method ApiMethod
     local function add_method_taking_table(method)
       local param_class_name = class.name.."."..method.name.."_param"
-      add("---@class "..param_class_name.."\n")
-
-      ---@type table<string, ApiParameter>
-      local custom_parameter_map = {}
-      ---@type ApiParameter[]
-      local custom_parameters = {}
-
-      ---@typelist integer, ApiParameter
-      for i, parameter in ipairs(sort_by_order(method.parameters)) do
-        local custom_parameter = linq.copy(parameter)
-        custom_parameter_map[custom_parameter.name] = custom_parameter
-        custom_parameters[i] = custom_parameter
-      end
-
-      if method.variant_parameter_groups then
-        -- there is no good place for method.variant_parameter_description sadly
-        for _, group in ipairs(method.variant_parameter_groups) do
-          for _, parameter in ipairs(group.parameters) do
-
-            local custom_description = "Applies to **"..group.name.."**: "
-              ..(parameter.optional and "(optional)" or "(required)")
-              ..extend_string{pre = "\n", str = parameter.description}
-
-            local custom_parameter = custom_parameter_map[parameter.name]
-            if custom_parameter then
-              custom_parameter.description = extend_string{
-                str = custom_parameter.description, post = "\n\n"
-              }..custom_description
-            else
-              custom_parameter = linq.copy(parameter)
-              custom_parameter.description = custom_description
-              custom_parameter_map[parameter.name] = custom_parameter
-              custom_parameters[#custom_parameters+1] = custom_parameter
-            end
-
-          end
-        end
-      end
-
-      local view_documentation_link = view_documentation(class.name.."::"..method.name)
-      for _, custom_parameter in ipairs(custom_parameters) do
-        add(convert_description(
-          extend_string{str = custom_parameter.description, post = "\n\n"}
-            ..view_documentation_link
-        ))
-        add("---@field "..custom_parameter.name.." "..convert_type(custom_parameter.type))
-        add((custom_parameter.optional and "|nil\n" or "\n"))
-      end
-
+      add_table_type(add, method, param_class_name, view_documentation(class.name.."::"..method.name))
       add("\n") -- blank line needed to break apart the description for the class fields and the method
       add(convert_description_for_method(method))
       add("---@param param"..(method.table_is_optional and "?" or " ")..param_class_name.."\n")
@@ -857,6 +918,7 @@ local function generate(_args, _data)
   generate_concepts()
   generate_custom()
   delete_invalid_files_from_target()
+  generate_table_types()
   args = nil
   file_prefix = nil
   data = nil
