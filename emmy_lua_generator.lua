@@ -23,8 +23,9 @@ local runtime_api_base_url ---@type string
 local file_prefix
 
 local function set_file_prefix()
-  file_prefix = "--##\n" -- ignored by sumneko.lua plugin https://github.com/JanSharp/FactorioSumnekoLuaPlugin#help-it-broke
-    .."---@meta\n" -- "ignored" by sumneko.lua https://github.com/sumneko/lua-language-server/wiki/EmmyLua-Annotations#meta
+  file_prefix = --"--##\n" -- ignored by sumneko.lua plugin https://github.com/JanSharp/FactorioSumnekoLuaPlugin#help-it-broke
+    --.. -- for now don't ignore them because the preprocessor plugin adds the `new` keyword which needs "access" to the class definitions
+    "---@meta\n" -- "ignored" by sumneko.lua https://github.com/sumneko/lua-language-server/wiki/EmmyLua-Annotations#meta
   if args.disable_specific_diagnostics then
     file_prefix = file_prefix
       ..table.concat(
