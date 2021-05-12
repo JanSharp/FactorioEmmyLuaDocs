@@ -657,7 +657,7 @@ local function generate_classes()
 
       add("\n") -- blank line needed to break apart the description for the class fields and the method
       add(convert_description_for_method(method))
-      add("---@param param "..param_class_name.."\n")
+      add("---@param param"..(method.table_is_optional and "?" or " ")..param_class_name.."\n")
       add_return_annotation(method)
       add(method.name.."=function(param)end,\n")
     end
