@@ -6,11 +6,12 @@ local serpent = require("serpent")
 local linq = require("linq")
 
 local lua_keywords = require("lua_keywords")
-local globals_map = require("globals_map")
 local concept_names = require("concept_names")
 
 local args ---@type Args
 local data ---@type ApiFormat
+---indexed by converted types
+local globals_map ---@type table<string, ApiGlobalVariable>
 local class_name_lut ---@type table<string, boolean>
 local event_name_lut ---@type table<string, boolean>
 local define_name_lut ---@type table<string, boolean>
@@ -106,17 +107,24 @@ local function extend_string(param)
   end
 end
 
+local convert_type
+
 ---requires data to be set already
-local function populate_luts()
+local function populate_luts_and_maps()
   ---@param name ApiName
   local function name_selector(name) return name.name end
   ---@param name string
   local function basic_name_selector(name) return name end
 
+  -- the values rean't actually booleans after this, but who cares
   class_name_lut = linq.to_dict(data.classes, name_selector)
   event_name_lut = linq.to_dict(data.events, name_selector)
   concept_name_lut = linq.to_dict(concept_names, basic_name_selector)
   builtin_type_name_lut = linq.to_dict(data.builtin_types, name_selector)
+
+  globals_map = linq.to_dict(data.global_variables, function(g)
+    return convert_type(g.type)
+  end)
 
   define_name_lut = {defines = true}
   ---@param define ApiDefine
@@ -368,12 +376,20 @@ end
 ---@param doc_type_name string @ for example "LuaGameScript", "LuaEntity" or "defines", etc...
 ---@return string
 local function get_local_or_global(doc_type_name)
-  local global_name = globals_map[doc_type_name]
-  return global_name and global_name or "local "..to_id(doc_type_name)
+  local global = globals_map[doc_type_name]
+  return global and global.name or "local "..to_id(doc_type_name)
+end
+
+---get the description of a global variable with for the given type if there is ones
+---@param doc_type_name string
+---@return string @ empty string when no global is found
+local function try_get_global_description(doc_type_name)
+  local global = globals_map[doc_type_name]
+  return global and global.description or ""
 end
 
 ---@param api_type ApiType
-local function convert_type(api_type)
+function convert_type(api_type)
   if not api_type then
     -- print("Attempting to convert type where `api_type` is nil.")
     return "any"
@@ -434,7 +450,7 @@ local function generate_defines()
   add(file_prefix)
   add(convert_description(view_documentation("defines")))
   add("---@class defines\n")
-  add(get_local_or_global("defines").."={}\n")
+  add("defines={}\n")
   ---@param define ApiDefine
   ---@param name_prefix string
   local function add_define(define, name_prefix)
@@ -675,9 +691,21 @@ local function generate_classes()
 
 
     add(file_prefix)
+    local global_description = extend_string{
+      pre = "**Global Description:**\n",
+      str = try_get_global_description(class.name),
+      post = "\n\n",
+    }
     add(convert_description_sub_see_also(
-      extend_string{str = class.description, post = "\n\n"}
-        ..extend_string{str = format_notes(class.notes), post = "\n\n"}
+      extend_string{
+        pre = extend_string{
+          str = global_description,
+          post = "**Class Description:**\n",
+        },
+        str = extend_string{str = class.description, post = "\n\n"}
+          ..extend_string{str = format_notes(class.notes), post = "\n\n"},
+        fallback = global_description,
+      }
         ..view_documentation(class.name)
         ..extend_string{pre = "\n\n", str = format_examples(class.examples)},
       class.subclasses,
@@ -813,7 +841,7 @@ local function generate(_args, _data)
   args = _args
   set_file_prefix()
   data = _data
-  populate_luts()
+  populate_luts_and_maps()
   valid_target_files = {}
   -- HACK: api_version "???" treated as "latest"
   runtime_api_base_url = "https://lua-api.factorio.com/"..(data.api_version == "???" and "latest" or data.api_version).."/"
@@ -827,6 +855,7 @@ local function generate(_args, _data)
   args = nil
   file_prefix = nil
   data = nil
+  globals_map = nil
   class_name_lut = nil
   event_name_lut = nil
   define_name_lut = nil
