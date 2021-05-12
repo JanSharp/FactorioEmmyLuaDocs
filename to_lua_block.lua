@@ -91,6 +91,10 @@ end
 
 --[[
 
+this file is meant to be run separately and is purely for diffing purposes of the different json versions
+i put it into the repo by accident but tbh it's not bad if it's in there
+usage is like this for example:
+
 ./lua to_lua_block.lua -- --file ../.ClonedRepositories/SpecialStuff/output/api_v7.json
 
 ]]

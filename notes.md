@@ -32,3 +32,24 @@ be part of the machine readable format or the html docs at all, because the enti
 point is to be able to use the prototype hirachy without knowing what it actually is.
 
 can a `complex_type` `function` have `ApiComplexType` parameters?
+
+note about global definitions and their descriptions
+--[[
+
+doing it like this, where the class definition and global definition
+is in the same palce also adds the description to the global
+for some reason, potentially because of lua library globals and sumneko.lua internals,
+doing
+```
+foo = {} ---@type foo
+```
+does not add the description for the class `foo` to the global `foo`
+while
+```
+local foo ---@type foo
+```
+does add it to the local `foo`
+
+that should explain why this additional complexity has been added
+
+]]
