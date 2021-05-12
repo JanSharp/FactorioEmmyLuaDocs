@@ -120,6 +120,33 @@ local result = {
   "EntityPrototypeFilters",
   "GameViewSettings",
   "TileProperties",
+
+  -- new ones that are probably new concepts that i don't have access to
+  -- so there are no comments with their locations
+
+  -- v6
+  "PathfinderWaypoint",
+  "EventData",
+  "NthTickEventData",
+  "BlueprintEntity",
+  "CircuitConnectionSpecification",
+  "FluidBoxFilter",
+  "FluidBoxFilterSpec",
+  "ChartTagSpec",
+  "HeatConnection",
+  "BlueprintSignalIcon",
+  "BlueprintItemIcon",
+  "Alert",
+  "CutsceneWaypoint",
+  "InserterCircuitConditions",
+  "TechnologyModifier",
+
+  -- v7
+  "CustomCommandData",
+  "WireConnectionSpecification",
+  "ScriptRenderVertexTarget",
+  "InventoryFilter",
+  "PathfinderFlags",
 }
 
 return result
