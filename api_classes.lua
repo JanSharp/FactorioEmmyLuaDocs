@@ -8,6 +8,13 @@
 ---@field classes ApiClass[]
 ---@field defines ApiDefine[]
 ---@field events ApiEvent[]
+---@field builtin_types ApiBuiltinType[]
+---@field global_variables ApiGlobalVariable[]
+
+---@class ApiBuiltinType : ApiName
+
+---@class ApiGlobalVariable : ApiName
+---@field type ApiType
 
 ---@class ApiName
 ---@field name string
@@ -26,35 +33,52 @@
 
 ---@alias ApiType ApiBasicType|ApiComplexType
 ---@alias ApiBasicType string
----@class ApiComplexType
----@field complex_type '"array"'|'"dictionary"'|'"variant"'|'"CustomArray"'|'"CustomDictionary"'|'"function"'|string
----@field key ApiType|nil @ used for "dictionary"|"CustomDictionary" and other
----@field value ApiType|nil @ used for "array"|"dictionary"|"CustomArray"|"CustomDictionary" and other
+---@class ApiComplexType : ApiTableTypeFields
+---@field complex_type '"array"'|'"dictionary"'|'"variant"'|'"function"'|'"LuaCustomTable"'|'"LuaLazyLoadedValue"'
+---@field key ApiType|nil @ used for "dictionary"|"LuaCustomTable"
+---@field value ApiType|nil @ used for "array"|"dictionary"|"LuaCustomTable"|"LuaLazyLoadedValue"
 ---@field options ApiType[]|nil @ used for "variant"
 ---@field parameters string[]|nil @ used for "function"
 
 ---@class ApiClass : ApiSubSeeAlso, ApiNotesAndExamples
 ---@field methods ApiMethod[]
 ---@field attributes ApiAttribute[]
+---@field operators ApiOperator[]
 ---@field base_classes string[]|nil
+
+---_abstract_\
+---Depending on the name it is either an ApiAttributeOperator or ApiMethodOperator\
+---`ApiAttributeOperator`:
+---- `"index"`
+---- `"length"`
+---`ApiMethodOperator`:
+---- `"call"`
+---@class ApiOperator : ApiName
 
 ---@class ApiAttribute : ApiSubSeeAlso, ApiNotesAndExamples
 ---@field type ApiType
 ---@field read boolean
 ---@field write boolean
 
----@class ApiMethod : ApiSubSeeAlso, ApiNotesAndExamples
----@field takes_table boolean
+---@class ApiAttributeOperator : ApiOperator, ApiAttribute
+
+---@class ApiTableTypeFields
 ---@field parameters ApiParameter[]
 ---type specific parameters\
 ---variant_parameter_groups and variant_parameter_description are either both nil or both not nil
 ---@field variant_parameter_groups ApiVariantParameterGroup[]|nil
 ---variant_parameter_groups and variant_parameter_description are either both nil or both not nil
 ---@field variant_parameter_description string|nil
----return_type and return_description are either both nil or both not nil
+
+---@class ApiMethod : ApiSubSeeAlso, ApiNotesAndExamples, ApiTableTypeFields
+---@field takes_table boolean
+---@field table_is_optional boolean|nil @ not `nil` when `takes_table` is `true`
+---return_type and return_description are either both `nil` or both not `nil`
 ---@field return_type ApiType|nil
----return_type and return_description are either both nil or both not nil
+---return_type and return_description are either both `nil` or both not `nil`
 ---@field return_description string|nil
+
+---@class ApiMethodOperator : ApiOperator, ApiMethod
 
 ---@class ApiParameter : ApiName
 ---@field type ApiType
