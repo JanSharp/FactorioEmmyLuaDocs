@@ -414,6 +414,11 @@ function convert_type(api_type)
       -- EmmyLua/sumneko.lua do not support generic type classes
       return "LuaLazyLoadedValue<"..convert_type(api_type.value)..",nil>"
     elseif api_type.complex_type == "LuaCustomTable" then
+      -- sumneko.lua doesn't actually support generic typed classes
+      -- so whenever it finds a type in the format of `type<key, value>`
+      -- that type gets the special treatment like `table<key, value>` would,
+      -- which makes it work in for loops and with indexing for example
+      -- which happens to work perfectly with LuaCustomTable
       return "LuaCustomTable<"..convert_type(api_type.key)
         ..","..convert_type(api_type.value)..">"
     elseif api_type.complex_type == "table" then
