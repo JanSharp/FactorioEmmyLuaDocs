@@ -15,6 +15,11 @@ Then run this in the root directory of the project:
 ```
 (for some reason git bash wants that `./` at the start. Idk why.)
 
+if you want the cache which is currently really just useful for debugging performace:
+```
+./lua main.lua -- --source-file source_data/runtime-api.json --target-dir output --cache-dir cache
+```
+
 ## Issues running the script
 
 If some requires don't work, make sure your environment variables for lua,
