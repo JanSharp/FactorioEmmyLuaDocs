@@ -122,7 +122,7 @@ local function populate_luts_and_maps()
   concept_name_lut = linq.to_dict(concept_names, basic_name_selector)
   builtin_type_name_lut = linq.to_dict(data.builtin_types, name_selector)
 
-  globals_map = linq.to_dict(data.global_variables, function(g)
+  globals_map = linq.to_dict(data.global_classes, function(g)
     return format_type(g.type, function()
       print("Complex table type is not supported for global variable `"..g.name.."`.")
       return "not_supported", "not_supported"

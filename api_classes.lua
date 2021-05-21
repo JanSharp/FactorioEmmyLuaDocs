@@ -9,7 +9,7 @@
 ---@field defines ApiDefine[]
 ---@field events ApiEvent[]
 ---@field builtin_types ApiBuiltinType[]
----@field global_variables ApiGlobalVariable[]
+---@field global_classes ApiGlobalVariable[]
 
 ---@class ApiBuiltinType : ApiName
 
