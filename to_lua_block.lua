@@ -61,27 +61,27 @@ local file_path = args.file_path
 
 if file_path:exists() then
   local data = json.decode(file.read_all_text(file_path)) ---@type ApiFormat
-  local function remove_emty_operators(t)
+  local function remove_stuff(t)
     t.order = nil
     t.description = nil
-    t.table_is_optional = nil
+    t.return_description = nil
+    t.examples = nil
+    t.notes = nil
+    -- t.table_is_optional = nil
     local remove_operators = false
     for k, v in pairs(t) do ---@type table|any
       if type(v) == "table" then
-        if k == "operators" then
-          if not next(v) then
-            remove_operators = true
-          end
-        else
-          remove_emty_operators(v)
-        end
+        -- if k == "operators" and not next(v) then
+        --   remove_operators = true
+        -- end
+        remove_stuff(v)
       end
     end
-    if remove_operators then
-      t.operators = nil
-    end
+    -- if remove_operators then
+    --   t.operators = nil
+    -- end
   end
-  remove_emty_operators(data)
+  remove_stuff(data)
   local target_path = file_path:sub(1, -2) / (file_path:filename()..".lua")
   file.write_all_text(target_path, serpent.block(data, {
     comment = false,
