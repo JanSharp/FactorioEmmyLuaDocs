@@ -797,7 +797,7 @@ local function generate_classes()
         local operator_copy = linq.copy(operator) ---@type ApiAttributeOperator
         operator_copy.name = operator.name == "index" and "__index" or "__len"
         operator_copy.html_doc_name = "operator%20"
-          ..(operator.name == "index" and "[]" or "#") -- HACK
+          ..(operator.name == "index" and "[]" or "#")
         add_attribute(operator_copy)
       end
     end
@@ -811,7 +811,7 @@ local function generate_classes()
       if operator.name == "call" then
         local operator_copy = linq.copy(operator) ---@type ApiMethodOperator
         operator_copy.name = "__call"
-        operator_copy.html_doc_name = "operator%20()" -- HACK
+        operator_copy.html_doc_name = "operator%20()"
         add_method(operator_copy)
       end
     end
