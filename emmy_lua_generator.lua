@@ -501,7 +501,7 @@ do
     end
     if type(api_type) == "string" then
       ---@narrow api_type string
-      return api_type == "function" and "fun()" or wrap(api_type)
+      return wrap(api_type)
     else
       ---@narrow api_type ApiComplexType
       if api_type.complex_type == "array" then
