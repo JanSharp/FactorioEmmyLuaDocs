@@ -907,6 +907,19 @@ local function generate_concepts()
 
   ---@param flag ApiFlag
   local function add_flag(flag)
+    local view_documentation_link = view_documentation(flag.name)
+    add(convert_description(
+      extend_string{str = flag.description, post = "\n\n"}
+        ..view_documentation_link
+    ))
+    add("---@class "..flag.name.."\n")
+    for _, option in ipairs(flag.options) do
+      add(convert_description(
+        extend_string{str = option.description, post = "\n\n"}
+          ..view_documentation_link
+      ))
+      add("---@field "..option.name.." boolean|nil\n")
+    end
   end
 
   ---@param table_concept ApiTableConcept
