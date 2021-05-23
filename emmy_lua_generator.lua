@@ -880,6 +880,11 @@ local function generate_concepts()
 
   ---@param concept ApiConcept
   local function add_concept(concept)
+    add(convert_description(
+      extend_string{str = concept.description, post = "\n\n"}
+      ..format_notes_and_examples(view_documentation(concept.name), concept)
+    ))
+    add("---@class "..concept.name.."\n")
   end
 
   ---@param struct ApiStruct
