@@ -924,6 +924,7 @@ local function generate_concepts()
 
   ---@param table_concept ApiTableConcept
   local function add_table_concept(table_concept)
+    add_table_type(add, table_concept, table_concept.name, view_documentation(table_concept.name))
   end
 
   ---@param union ApiUnion
