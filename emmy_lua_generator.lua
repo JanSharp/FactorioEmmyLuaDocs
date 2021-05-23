@@ -818,11 +818,8 @@ local function add_class(add, class, is_struct)
         add_attribute(operator_copy)
       end
     end
-  end
 
-  add(get_local_or_global(class.name).."={\n")
-
-  if not is_struct then
+    add(get_local_or_global(class.name).."={\n")
     for _, method in ipairs(class.methods) do
       add_method(method)
     end
@@ -835,9 +832,8 @@ local function add_class(add, class, is_struct)
         add_method(operator_copy)
       end
     end
+    add("}")
   end
-
-  add("}")
 end
 
 local function generate_classes()
