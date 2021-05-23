@@ -944,6 +944,13 @@ local function generate_concepts()
 
   ---@param type_concept ApiTypeConcept
   local function add_type_concept(type_concept)
+    add(convert_description(
+      extend_string{str = type_concept.description, post = "\n\n"}
+        -- HACK: this only applies to Filters which is the only type of concept using this as of v8
+        .."**Editors Note:** This description is lacking. Refer to the html docs (link below).\n\n"
+        ..view_documentation(type_concept.name)
+    ))
+    add("---@class "..type_concept.name.."\n")
   end
 
   add(file_prefix)
