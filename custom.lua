@@ -14,3 +14,9 @@
 
 ---LuaRemote.call param ...
 ---@class variadic
+
+---BlueprintEntity.connections
+---@class BlueprintCircuitConnection
+
+---BlueprintEntity.control_behavior
+---@class BlueprintControlBehavior
