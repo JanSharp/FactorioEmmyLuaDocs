@@ -8,6 +8,7 @@
 ---@field classes ApiClass[]
 ---@field defines ApiDefine[]
 ---@field events ApiEvent[]
+---@field concepts ApiConceptBase[]
 ---@field builtin_types ApiBuiltinType[]
 ---@field global_classes ApiGlobalVariable[]
 
@@ -16,12 +17,14 @@
 ---@class ApiGlobalVariable : ApiName
 ---@field type ApiType
 
----@class ApiName
----@field name string
+---@class ApiDescription
 ---@field description string
 ---since every list is sorted alphabetically, in order to use data in the order it is\
 ---used for the html docs you must use this order property to sort the list
 ---@field order integer
+
+---@class ApiName : ApiDescription
+---@field name string
 
 ---@class ApiNotesAndExamples : ApiName
 ---@field notes string[]|nil
@@ -94,3 +97,83 @@
 
 ---@class ApiEvent : ApiName, ApiNotesAndExamples
 ---@field data ApiParameter[]
+
+---@class ApiOption : ApiDescription
+---@field type ApiType
+
+---@class ApiConceptBase : ApiName
+---@field category '"specification"'|'"concept"'|'"struct"'|'"flag"'|'"table"'|'"union"'|'"type"'
+
+---@class ApiSpecification : ApiConceptBase, ApiNotesAndExamples
+---@field options ApiOption[]
+
+---@class ApiConcept : ApiConceptBase, ApiNotesAndExamples
+
+---@class ApiStruct : ApiConceptBase
+---@field attributes ApiAttribute[]
+
+---@class ApiFlag : ApiConceptBase
+---@field options ApiName[]
+
+---@class ApiTableConcept : ApiConceptBase, ApiSubSeeAlso, ApiNotesAndExamples, ApiTableTypeFields
+
+---@class ApiUnion : ApiConceptBase, ApiNotesAndExamples
+---@field options ApiName[]
+
+---@class ApiTypeConcept : ApiConceptBase
+
+--[[
+
+-- this was temporarily used becuase null fields were missing in v8 unintionally
+
+{
+  concept = {
+    examples = "table",
+    notes = "table"
+  },
+  flag = {
+    options = "table"
+  },
+  specification = {
+    examples = "table",
+    options = "table"
+  },
+  struct = {
+    attributes = "table"
+  },
+  table = {
+    examples = "table",
+    notes = "table",
+    parameters = "table",
+    see_also = "table",
+    variant_parameter_description = "string",
+    variant_parameter_groups = "table"
+  },
+  type = {},
+  union = {
+    notes = "table",
+    options = "table"
+  }
+}
+
+generated with this (vv) in main.lua
+
+```lua
+local categories = {}
+for _, concept in ipairs(runtime_api_data.concepts) do
+  local c = categories[concept.category]
+  if not c then c = {} categories[concept.category] = c end
+  for k, v in next, concept do
+    c[k] = type(v)
+  end
+end
+for _, category in next, categories do
+  category.category = nil
+  category.name = nil
+  category.order = nil
+  category.description = nil
+end
+print(serpent.block(categories, {comment = false, sort_keys = true}))
+```
+
+]]

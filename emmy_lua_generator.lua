@@ -6,11 +6,10 @@ local serpent = require("serpent")
 local linq = require("linq")
 
 local lua_keywords = require("lua_keywords")
-local concept_names = require("concept_names")
 
 local args ---@type Args
 local data ---@type ApiFormat
----indexed by converted types
+---indexed by formatted types
 local globals_map ---@type table<string, ApiGlobalVariable>
 local class_name_lut ---@type table<string, boolean>
 local event_name_lut ---@type table<string, boolean>
@@ -113,13 +112,11 @@ local format_type
 local function populate_luts_and_maps()
   ---@param name ApiName
   local function name_selector(name) return name.name end
-  ---@param name string
-  local function basic_name_selector(name) return name end
 
   -- the values rean't actually booleans after this, but who cares
   class_name_lut = linq.to_dict(data.classes, name_selector)
   event_name_lut = linq.to_dict(data.events, name_selector)
-  concept_name_lut = linq.to_dict(concept_names, basic_name_selector)
+  concept_name_lut = linq.to_dict(data.concepts, name_selector)
   builtin_type_name_lut = linq.to_dict(data.builtin_types, name_selector)
 
   globals_map = linq.to_dict(data.global_classes, function(g)
@@ -180,7 +177,7 @@ local function resolve_internal_reference(reference, display_name)
     end
   end
   if not relative_link then
-    print("Unresolved internal reference `"..reference.."`. Missing hardcoded concept in concept_names.lua?")
+    print("Unresolved internal reference `"..reference.."`.")
     relative_link = "Unresolved_"..reference
   end
   return "["..(display_name or reference).."]("..runtime_api_base_url..relative_link..")"
@@ -353,6 +350,16 @@ local function format_examples(examples)
   end), "\n\n")
 end
 
+---formates notes + view_documentation_link + examples in that order
+---@param view_documentation_link string
+---@param notes_and_examples ApiNotesAndExamples
+---@return string
+local function format_notes_and_examples(view_documentation_link, notes_and_examples)
+  return extend_string{str = format_notes(notes_and_examples.notes), post = "\n\n"}
+    ..view_documentation_link
+    ..extend_string{pre = "\n\n", str = format_examples(notes_and_examples.examples)}
+end
+
 local escaped_keyword_map = {} ---@type table<string, string>
 for _, keyword in ipairs(lua_keywords) do
   escaped_keyword_map[keyword] = keyword.."_"
@@ -453,6 +460,7 @@ end
 
 local generate_table_types
 do
+  local complex_table_type_name_lut = {}
   local result = {nil}
   local c = 1 -- leave [1] nil for file_prefix later on
   ---@param part string
@@ -465,7 +473,16 @@ do
   ---@param get_table_name_and_view_doc_link fun(): string, string @
   ---get `table_class_name` and `view_documentation_link` for
   ---`add_table_type` if `api_type` is a `table` `complex_type`
-  function format_type(api_type, get_table_name_and_view_doc_link)
+  ---@param add_doc_links? boolean @ Default: `false`
+  function format_type(api_type, get_table_name_and_view_doc_link, add_doc_links)
+    ---@param str string
+    local function wrap(str)
+      if add_doc_links then
+        return resolve_internal_reference(str)
+      else
+        return str
+      end
+    end
     ---@param table_name_appended_str string
     local function modify_getter(table_name_appended_str)
       return function()
@@ -479,13 +496,13 @@ do
     end
     if type(api_type) == "string" then
       ---@narrow api_type string
-      return api_type == "function" and "fun()" or api_type:gsub(" ", "-")
+      return api_type == "function" and "fun()" or wrap(api_type)
     else
       ---@narrow api_type ApiComplexType
       if api_type.complex_type == "array" then
         return format_type(api_type.value, get_table_name_and_view_doc_link).."[]"
       elseif api_type.complex_type == "dictionary" then
-        return "table<"..format_type(api_type.key, modify_getter("_key"))
+        return wrap("table").."<"..format_type(api_type.key, modify_getter("_key"))
           ..","..format_type(api_type.value, modify_getter("_value"))..">"
       elseif api_type.complex_type == "variant" then
         local converted_options = {}
@@ -495,17 +512,21 @@ do
         return table.concat(converted_options, "|")
       elseif api_type.complex_type == "LuaLazyLoadedValue" then
         -- EmmyLua/sumneko.lua do not support generic type classes
-        return "LuaLazyLoadedValue<"..format_type(api_type.value, get_table_name_and_view_doc_link)..",nil>"
+        return wrap("LuaLazyLoadedValue").."<"..format_type(api_type.value, get_table_name_and_view_doc_link)..",nil>"
       elseif api_type.complex_type == "LuaCustomTable" then
         -- sumneko.lua doesn't actually support generic typed classes
         -- so whenever it finds a type in the format of `type<key, value>`
         -- that type gets the special treatment like `table<key, value>` would,
         -- which makes it work in for loops and with indexing for example
         -- which happens to work perfectly with LuaCustomTable
-        return "LuaCustomTable<"..format_type(api_type.key, modify_getter("_key"))
+        return wrap("LuaCustomTable").."<"..format_type(api_type.key, modify_getter("_key"))
           ..","..format_type(api_type.value, modify_getter("_value"))..">"
       elseif api_type.complex_type == "table" then
-        return add_table_type(add, api_type, get_table_name_and_view_doc_link())
+        local table_class_name, view_documentation_link = get_table_name_and_view_doc_link()
+        if not complex_table_type_name_lut[table_class_name] then -- only add each type once
+          complex_table_type_name_lut[table_class_name] = true
+          return add_table_type(add, api_type, table_class_name, view_documentation_link)
+        end
       elseif api_type.complex_type == "function" then
         ---@param v string
         return "fun("..table.concat(linq.select(api_type.parameters, function(v) return to_id(v)..":"..to_id(v) end), ",")..")"
@@ -592,9 +613,7 @@ local function generate_events()
   for _, event in ipairs(data.events) do
     add(convert_description(
       extend_string{str = event.description, post = "\n\n"}
-        ..extend_string{str = format_notes(event.notes), post = "\n\n"}
-        ..view_documentation(event.name)
-        ..extend_string{pre = "\n\n", str = format_examples(event.examples)}
+        ..format_notes_and_examples(view_documentation(event.name), event)
     ))
     add("---@class "..event.name.."\n")
     for _, param in ipairs(event.data) do
@@ -641,9 +660,7 @@ local function generate_classes()
         "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
         ..extend_string{pre = "\n", str = attribute.description}
         .."\n\n"
-        ..extend_string{str = format_notes(attribute.notes), post = "\n\n"}
-        ..view_doc_link
-        ..extend_string{pre = "\n\n", str = format_examples(attribute.examples)},
+        ..format_notes_and_examples(view_doc_link, attribute),
 
         attribute.subclasses,
         attribute.see_also
@@ -700,9 +717,7 @@ local function generate_classes()
     local function convert_description_for_method(method)
       return convert_description_sub_see_also(
         extend_string{str = method.description, post = "\n\n"}
-          ..extend_string{str = format_notes(method.notes), post = "\n\n"}
-          ..view_documentation_for_method(method)
-          ..extend_string{pre = "\n\n", str = format_examples(method.examples)},
+          ..format_notes_and_examples(view_documentation_for_method(method), method),
         method.subclasses,
         method.see_also
       )
@@ -832,40 +847,84 @@ local function generate_concepts()
     result[c] = part
   end
 
-  add(file_prefix)
-
-  for _, concept_name in ipairs(concept_names) do
-    if not (concept_name == "GameViewSettings" or concept_name == "TileProperties") then
-      add(convert_description(view_documentation(concept_name)))
-      add("---@class "..concept_name.."\n")
+  ---@param specification ApiSpecification
+  local function add_specification(specification)
+    local view_documentation_link = view_documentation(specification.name)
+    local sorted_options = sort_by_order(specification.options)
+    local function get_table_name_and_view_doc_link(option)
+      return specification.name.."."..(option.order + 1), view_documentation_link
     end
+    add(convert_description(
+      extend_string{str = specification.description, post = "\n\n"}
+        .."May be specified in one of the following ways:"
+        ---@param option ApiOption
+        ..table.concat(linq.select(sorted_options, function(option)
+          return "\n- "
+            ..format_type(option.type, function()
+              return get_table_name_and_view_doc_link(option)
+            end, true)
+            ..extend_string{pre = ": ", str = option.description}
+        end))
+        .."\n\n"
+        ..format_notes_and_examples(view_documentation_link, specification)
+    ))
+    add("---@class "..specification.name..":")
+    ---@param option ApiOption
+    add(table.concat(linq.select(sorted_options, function(option)
+      return format_type(option.type, function()
+        return get_table_name_and_view_doc_link(option)
+      end)
+    end), ","))
+    add("\n")
   end
 
-  add(convert_description(view_documentation("GameViewSettings")))
-  add([[
----@class GameViewSettings
----@field show_controller_gui boolean [RW] Show the controller GUI elements.
----@field show_minimap boolean [RW] Show the chart in the upper right-hand corner of the screen.
----@field show_research_info boolean [RW] Show research progress and name in the upper right-hand corner of the screen.
----@field show_entity_info boolean [RW] Show overlay icons on entities.
----@field show_alert_gui boolean [RW] Show the flashing alert icons next to the player's toolbar.
----@field update_entity_selection boolean [RW] When true (the default), mousing over an entity will select it.
----@field show_rail_block_visualisation boolean [RW] When true (false is default), the rails will always show the rail block visualisation.
----@field show_side_menu boolean [RW] Shows or hides the buttons row.
----@field show_map_view_options boolean [RW] Shows or hides the view options when map is opened.
----@field show_quickbar boolean [RW] Shows or hides quickbar of shortcuts.
----@field show_shortcut_bar boolean [RW] Shows or hides the shortcut bar.
-]])
+  ---@param concept ApiConcept
+  local function add_concept(concept)
+  end
 
-  add(convert_description(view_documentation("TileProperties")))
-  add([[
----@class TileProperties
----@field tier_from_start double [RW]
----@field roughness double [RW]
----@field elevation double [RW]
----@field available_water double [RW]
----@field temperature double [RW]
-]])
+  ---@param struct ApiStruct
+  local function add_struct(struct)
+  end
+
+  ---@param flag ApiFlag
+  local function add_flag(flag)
+  end
+
+  ---@param table_concept ApiTableConcept
+  local function add_table_concept(table_concept)
+  end
+
+  ---@param union ApiUnion
+  local function add_union(union)
+  end
+
+  ---@param type_concept ApiTypeConcept
+  local function add_type_concept(type_concept)
+  end
+
+  add(file_prefix)
+
+  for _, concept in ipairs(data.concepts) do
+    if concept.category == "specification" then
+      add_specification(concept)
+    elseif concept.category == "concept" then
+      add_concept(concept)
+    elseif concept.category == "struct" then
+      add_struct(concept)
+    elseif concept.category == "flag" then
+      add_flag(concept)
+    elseif concept.category == "table" then
+      add_table_concept(concept)
+    elseif concept.category == "union" then
+      add_union(concept)
+    elseif concept.category == "type" then
+      add_type_concept(concept)
+    else
+      print("Unknown concept category '"..concept.category.."' for concept '"..concept.name.."'.")
+      add(convert_description(view_documentation(concept.name)))
+      add("---@class "..concept.name.."\n")
+    end
+  end
 
   write_file_to_target("concepts.lua", table.concat(result))
 end
