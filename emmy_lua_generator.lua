@@ -442,7 +442,9 @@ local function add_table_type(add, type_data, table_class_name, view_documentati
       extend_string{str = custom_parameter.description, post = "\n\n"}
         ..view_documentation_link
     ))
-    add("---@field "..custom_parameter.name.." "..format_type(custom_parameter.type))
+    add("---@field "..custom_parameter.name.." "..format_type(custom_parameter.type, function()
+      return table_class_name.."."..custom_parameter.name, view_documentation_link
+    end))
     add((custom_parameter.optional and "|nil\n" or "\n"))
   end
 
