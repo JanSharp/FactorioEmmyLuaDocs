@@ -929,6 +929,17 @@ local function generate_concepts()
 
   ---@param union ApiUnion
   local function add_union(union)
+    add(convert_description(
+      extend_string{str = union.description, post = "\n\n"}
+        .."Possible values are:"
+        ---@param option ApiName
+        ..table.concat(linq.select(sort_by_order(union.options), function(option)
+          return "\n- \""..option.name.."\""..extend_string{pre = " - ", str = option.description}
+        end))
+        .."\n\n"
+        ..format_notes_and_examples(view_documentation(union.name), union)
+    ))
+    add("---@class "..union.name.."\n")
   end
 
   ---@param type_concept ApiTypeConcept
