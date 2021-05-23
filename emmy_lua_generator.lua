@@ -165,7 +165,12 @@ local function resolve_internal_reference(reference, display_name)
   else
     local class_name, member_name = reference:match("^(.-)::(.*)$") ---@type string
     if class_name then
-      relative_link = class_name..".html#"..class_name.."."..member_name
+      local function build_link(main) return main..".html#"..class_name.."."..member_name end
+      if class_name_lut[class_name] then
+        relative_link = build_link(class_name) ---@type string drunk as usual
+      elseif concept_name_lut[class_name] then -- is it may be a struct?
+        relative_link = build_link("Concepts")
+      end -- otherwise unresolved
     elseif reference:find("Filters$") then
       if reference:find("^Lua") then
         relative_link = "Event-Filters.html#"..reference
@@ -641,161 +646,154 @@ local function convert_base_classes(base_classes)
   end
 end
 
-local function generate_classes()
-  for _, class in ipairs(data.classes) do
-    local result = {}
-    local c = 0
-    ---@param part string
-    local function add(part)
-      c = c + 1
-      result[c] = part
-    end
+---@param add fun(part: string)
+---@param class ApiClass|ApiStruct
+---@param is_struct? boolean @ Default: `false`
+local function add_class(add, class, is_struct)
+  ---@param attribute ApiAttribute
+  local function add_attribute(attribute)
+    ---@diagnostic disable-next-line: undefined-field
+    local view_doc_link = view_documentation(class.name.."::"..(attribute.html_doc_name or attribute.name))
+    add(convert_description_sub_see_also(
+      "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
+      ..extend_string{pre = "\n", str = attribute.description}
+      .."\n\n"
+      ..format_notes_and_examples(view_doc_link, attribute),
 
+      attribute.subclasses,
+      attribute.see_also
+    ))
+    add("---@field "..attribute.name.." "..format_type(attribute.type, function()
+      return class.name.."."..attribute.name, view_doc_link
+    end).."\n")
+  end
 
-    ---@param attribute ApiAttribute
-    local function add_attribute(attribute)
-      ---@diagnostic disable-next-line: undefined-field
-      local view_doc_link = view_documentation(class.name.."::"..(attribute.html_doc_name or attribute.name))
-      add(convert_description_sub_see_also(
-        "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
-        ..extend_string{pre = "\n", str = attribute.description}
-        .."\n\n"
-        ..format_notes_and_examples(view_doc_link, attribute),
+  ---@param method ApiMethod
+  local function view_documentation_for_method(method)
+    ---@diagnostic disable-next-line: undefined-field
+    return view_documentation(class.name.."::"..(method.html_doc_name or method.name))
+  end
 
-        attribute.subclasses,
-        attribute.see_also
-      ))
-      add("---@field "..attribute.name.." "..format_type(attribute.type, function()
-        return class.name.."."..attribute.name, view_doc_link
-      end).."\n")
-    end
-
-    ---@param method ApiMethod
-    local function view_documentation_for_method(method)
-      ---@diagnostic disable-next-line: undefined-field
-      return view_documentation(class.name.."::"..(method.html_doc_name or method.name))
-    end
-
-    ---@param parameter ApiParameter
-    ---@param method ApiMethod
-    local function add_vararg_annotation(parameter, method)
-      add("---@vararg "..format_type(parameter.type, function()
-        return class.name.."."..method.name.."_vararg", view_documentation_for_method(method)
-      end).."\n")
-      if parameter.description ~= "" then
-        local description = "\n**vararg**:"
-        if is_single_line(parameter.description) then
-          description = description.." "..parameter.description
-        else
-          description = description.."\n\n"..parameter.description
-        end
-        add(convert_description(description))
+  ---@param parameter ApiParameter
+  ---@param method ApiMethod
+  local function add_vararg_annotation(parameter, method)
+    add("---@vararg "..format_type(parameter.type, function()
+      return class.name.."."..method.name.."_vararg", view_documentation_for_method(method)
+    end).."\n")
+    if parameter.description ~= "" then
+      local description = "\n**vararg**:"
+      if is_single_line(parameter.description) then
+        description = description.." "..parameter.description
+      else
+        description = description.."\n\n"..parameter.description
       end
+      add(convert_description(description))
     end
+  end
 
-    ---@param parameter ApiParameter
-    ---@param method ApiMethod
-    local function add_param_annontation(parameter, method)
-      add("---@param "..escape_keyword(parameter.name)..(parameter.optional and "?" or " "))
-      add(convert_param_or_return(parameter.type, parameter.description, function()
-        return class.name.."."..method.name.."."..parameter.name, view_documentation_for_method(method)
+  ---@param parameter ApiParameter
+  ---@param method ApiMethod
+  local function add_param_annontation(parameter, method)
+    add("---@param "..escape_keyword(parameter.name)..(parameter.optional and "?" or " "))
+    add(convert_param_or_return(parameter.type, parameter.description, function()
+      return class.name.."."..method.name.."."..parameter.name, view_documentation_for_method(method)
+    end))
+  end
+
+  ---@param method ApiMethod
+  local function add_return_annotation(method)
+    if method.return_type then
+      add("---@return "..convert_param_or_return(method.return_type, method.return_description, function()
+        return class.name.."."..method.name.."_return", view_documentation_for_method(method)
       end))
     end
-
-    ---@param method ApiMethod
-    local function add_return_annotation(method)
-      if method.return_type then
-        add("---@return "..convert_param_or_return(method.return_type, method.return_description, function()
-          return class.name.."."..method.name.."_return", view_documentation_for_method(method)
-        end))
-      end
-    end
+  end
 
 
 
-    ---@param method ApiMethod
-    local function convert_description_for_method(method)
-      return convert_description_sub_see_also(
-        extend_string{str = method.description, post = "\n\n"}
-          ..format_notes_and_examples(view_documentation_for_method(method), method),
-        method.subclasses,
-        method.see_also
-      )
-    end
+  ---@param method ApiMethod
+  local function convert_description_for_method(method)
+    return convert_description_sub_see_also(
+      extend_string{str = method.description, post = "\n\n"}
+        ..format_notes_and_examples(view_documentation_for_method(method), method),
+      method.subclasses,
+      method.see_also
+    )
+  end
 
 
-    ---@param method ApiMethod
-    local function add_regular_method(method)
-      add(convert_description_for_method(method))
+  ---@param method ApiMethod
+  local function add_regular_method(method)
+    add(convert_description_for_method(method))
 
-      ---@type ApiParameter[]
-      local sorted_parameters = sort_by_order(method.parameters)
-      for _, parameter in ipairs(sorted_parameters) do
-        if parameter.name == "..." then
-          add_vararg_annotation(parameter)
-        else
-          add_param_annontation(parameter)
-        end
-      end
-      add_return_annotation(method)
-
-      ---@param parameter ApiParameter
-      local name_list = linq.select(sorted_parameters, function(parameter)
-        return escape_keyword(parameter.name)
-      end)
-
-      add(method.name.."=function(")
-      add(table.concat(name_list, ","))
-      add(")end,\n")
-    end
-
-
-    ---@param method ApiMethod
-    local function add_method_taking_table(method)
-      local param_class_name = class.name.."."..method.name.."_param"
-      add_table_type(add, method, param_class_name, view_documentation(class.name.."::"..method.name))
-      add("\n") -- blank line needed to break apart the description for the class fields and the method
-      add(convert_description_for_method(method))
-      add("---@param param"..(method.table_is_optional and "?" or " ")..param_class_name.."\n")
-      add_return_annotation(method)
-      add(method.name.."=function(param)end,\n")
-    end
-
-
-    ---@param method ApiMethod
-    local function add_method(method)
-      if method.takes_table then
-        add_method_taking_table(method)
+    ---@type ApiParameter[]
+    local sorted_parameters = sort_by_order(method.parameters)
+    for _, parameter in ipairs(sorted_parameters) do
+      if parameter.name == "..." then
+        add_vararg_annotation(parameter)
       else
-        add_regular_method(method)
+        add_param_annontation(parameter)
       end
     end
+    add_return_annotation(method)
+
+    ---@param parameter ApiParameter
+    local name_list = linq.select(sorted_parameters, function(parameter)
+      return escape_keyword(parameter.name)
+    end)
+
+    add(method.name.."=function(")
+    add(table.concat(name_list, ","))
+    add(")end,\n")
+  end
+
+
+  ---@param method ApiMethod
+  local function add_method_taking_table(method)
+    local param_class_name = class.name.."."..method.name.."_param"
+    add_table_type(add, method, param_class_name, view_documentation(class.name.."::"..method.name))
+    add("\n") -- blank line needed to break apart the description for the class fields and the method
+    add(convert_description_for_method(method))
+    add("---@param param"..(method.table_is_optional and "?" or " ")..param_class_name.."\n")
+    add_return_annotation(method)
+    add(method.name.."=function(param)end,\n")
+  end
+
+
+  ---@param method ApiMethod
+  local function add_method(method)
+    if method.takes_table then
+      add_method_taking_table(method)
+    else
+      add_regular_method(method)
+    end
+  end
 
 
 
-    add(file_prefix)
-    local global_description = extend_string{
-      pre = "**Global Description:**\n",
-      str = try_get_global_description(class.name),
-      post = "\n\n",
+  local global_description = extend_string{
+    pre = "**Global Description:**\n",
+    str = try_get_global_description(class.name),
+    post = "\n\n",
+  }
+  add(convert_description_sub_see_also(
+    extend_string{
+      pre = extend_string{
+        str = global_description,
+        post = "**Class Description:**\n",
+      },
+      str = extend_string{str = class.description, post = "\n\n"}
+        ..extend_string{str = format_notes(class.notes), post = "\n\n"},
+      fallback = global_description,
     }
-    add(convert_description_sub_see_also(
-      extend_string{
-        pre = extend_string{
-          str = global_description,
-          post = "**Class Description:**\n",
-        },
-        str = extend_string{str = class.description, post = "\n\n"}
-          ..extend_string{str = format_notes(class.notes), post = "\n\n"},
-        fallback = global_description,
-      }
-        ..view_documentation(class.name)
-        ..extend_string{pre = "\n\n", str = format_examples(class.examples)},
-      class.subclasses,
-      class.see_also
-    ))
-    add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
+      ..view_documentation(class.name)
+      ..extend_string{pre = "\n\n", str = format_examples(class.examples)},
+    class.subclasses,
+    class.see_also
+  ))
+  add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
 
+  if not is_struct then
     for _, operator in ipairs(class.operators) do
       if operator.name ~= "index"
         and operator.name ~= "length"
@@ -804,11 +802,13 @@ local function generate_classes()
         print("Unknown operator `"..operator.name.."` in class `"..class.name.."`.")
       end
     end
+  end
 
-    for _, attribute in ipairs(class.attributes) do
-      add_attribute(attribute)
-    end
+  for _, attribute in ipairs(class.attributes) do
+    add_attribute(attribute)
+  end
 
+  if not is_struct then
     for _, operator in ipairs(class.operators) do
       if operator.name == "index" or operator.name == "length" then
         local operator_copy = linq.copy(operator) ---@type ApiAttributeOperator
@@ -818,8 +818,11 @@ local function generate_classes()
         add_attribute(operator_copy)
       end
     end
+  end
 
-    add(get_local_or_global(class.name).."={\n")
+  add(get_local_or_global(class.name).."={\n")
+
+  if not is_struct then
     for _, method in ipairs(class.methods) do
       add_method(method)
     end
@@ -832,8 +835,22 @@ local function generate_classes()
         add_method(operator_copy)
       end
     end
-    add("}")
+  end
 
+  add("}")
+end
+
+local function generate_classes()
+  for _, class in ipairs(data.classes) do
+    local result = {}
+    local c = 0
+    ---@param part string
+    local function add(part)
+      c = c + 1
+      result[c] = part
+    end
+    add(file_prefix)
+    add_class(add, class)
     write_file_to_target(to_id(class.name)..".lua", table.concat(result))
   end
 end
@@ -889,6 +906,7 @@ local function generate_concepts()
 
   ---@param struct ApiStruct
   local function add_struct(struct)
+    add_class(add, struct, true)
   end
 
   ---@param flag ApiFlag
