@@ -33,6 +33,12 @@ point is to be able to use the prototype hirachy without knowing what it actuall
 
 can a `complex_type` `function` have `ApiComplexType` parameters?
 
+what exactly is going on with the newlines in descriptions now
+
+variadic is still a thing! how did i miss that
+
+just a few more custom types i had to define (5)
+
 note about global definitions and their descriptions
 --[[
 
@@ -53,7 +59,3 @@ does add it to the local `foo`
 that should explain why this additional complexity has been added
 
 ]]
-
-what exactly is going on with the newlines in descriptions now
-
-missing null entries in v8
