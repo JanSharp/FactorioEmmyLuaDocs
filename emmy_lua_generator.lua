@@ -117,7 +117,7 @@ local function special_concat(sep, t)
     local str = t[i]
     t[i] = nil
     if str == "" then
-      shift = 1
+      shift = shift + 1
     else
       t[i - shift] = str ---@type string
     end
@@ -377,12 +377,14 @@ end
 ---@param view_documentation_link string
 ---@param description? string @ Default: obj.description
 local function format_entire_description(obj, view_documentation_link, description)
-  return extend_string{str = description or obj.description, post = "\n\n"}
-  ..extend_string{str = format_notes(obj.notes), post = "\n\n"}
-  ..view_documentation_link
-  ..extend_string{pre = "\n\n", str = format_examples(obj.examples)}
-  ..extend_string{pre = "\n\n", str = format_subclasses(obj.subclasses)}
-  ..extend_string{pre = "\n\n", str = format_see_also(obj.see_also)}
+  return special_concat("\n\n", {
+    description or obj.description,
+    format_notes(obj.notes),
+    view_documentation_link,
+    format_examples(obj.examples),
+    format_subclasses(obj.subclasses),
+    format_see_also(obj.see_also)
+  })
 end
 
 local escaped_keyword_map = {} ---@type table<string, string>
@@ -452,7 +454,7 @@ local function add_table_type(add, type_data, table_class_name, view_documentati
     for _, group in ipairs(type_data.variant_parameter_groups) do
       for _, parameter in ipairs(group.parameters) do
 
-        local custom_description = applies_to.." **"..group.name.."**: "
+        local custom_description = applies_to.." **\""..group.name.."\"**: "
           ..(parameter.optional and "(optional)" or "(required)")
           ..extend_string{pre = "\n", str = parameter.description}
 
