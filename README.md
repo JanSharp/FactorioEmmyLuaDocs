@@ -23,11 +23,18 @@ if you want the cache which is currently really just useful for debugging perfor
 ## Working with sumneko.lua
 
 Once you have `sumneko.lua` installed, add the output directory of this script to the `Lua.workspace.library` setting.
-For example:
+
+Additionally `sumneko.lua` has a limit on file size and file count for preloading files,
+specifically the `Lua.workspace.preloadFileSize` _has to be_ increased for this, and to be save for the future,
+might as well increase `Lua.workspace.maxPreload`.
+
+For example (i just went with stupid numbers):
 ```json
 "Lua.workspace.library": [
   "C:/Dev/FactorioEmmyLuaDocs/output",
 ],
+"Lua.workspace.preloadFileSize": 1000000,
+"Lua.workspace.maxPreload": 1000000,
 ```
 
 ### Plugin
