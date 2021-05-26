@@ -355,7 +355,7 @@ local function format_notes(notes)
     return ""
   end
   return table.concat(linq.select(notes, function(note)
-    return "**Note:**: "..note
+    return "**Note:** "..note
   end), "\n\n")
 end
 
