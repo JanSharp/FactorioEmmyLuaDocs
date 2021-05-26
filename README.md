@@ -20,6 +20,22 @@ if you want the cache which is currently really just useful for debugging perfor
 ./lua main.lua -- --source-file source_data/runtime-api.json --target-dir output --cache-dir cache
 ```
 
+## Working with sumneko.lua
+
+Once you have `sumneko.lua` installed, add the output directory of this script to the `Lua.workspace.library` setting.
+For example:
+```json
+"Lua.workspace.library": [
+  "C:/Dev/FactorioEmmyLuaDocs/output",
+],
+```
+
+### Plugin
+
+The [FactorioSumnekoLuaPlugin](https://github.com/JanSharp/FactorioSumnekoLuaPlugin) is another thing you can use to improve
+the experience working with factorio and sumneko.lua, if you are willing to deal with sumneko.lua being drunk a bit more often because of it,
+though it's not that bad. For installation of the plugin see it's readme.
+
 ## Issues running the script
 
 If some requires don't work, make sure your environment variables for lua,
