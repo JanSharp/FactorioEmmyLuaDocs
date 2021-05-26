@@ -427,8 +427,11 @@ end
 ---@param type_data ApiTableTypeFields
 ---@param table_class_name string
 ---@param view_documentation_link string
+---@param applies_to? string @ Default: `"Applies to"`
 ---@return string table_class_name
-local function add_table_type(add, type_data, table_class_name, view_documentation_link)
+local function add_table_type(add, type_data, table_class_name, view_documentation_link, applies_to)
+  applies_to = applies_to or "Applies to"
+
   add(convert_description(view_documentation_link))
   add("---@class "..table_class_name.."\n")
 
@@ -449,7 +452,7 @@ local function add_table_type(add, type_data, table_class_name, view_documentati
     for _, group in ipairs(type_data.variant_parameter_groups) do
       for _, parameter in ipairs(group.parameters) do
 
-        local custom_description = "Applies to **"..group.name.."**: "
+        local custom_description = applies_to.." **"..group.name.."**: "
           ..(parameter.optional and "(optional)" or "(required)")
           ..extend_string{pre = "\n", str = parameter.description}
 
@@ -939,15 +942,9 @@ local function generate_concepts()
     add("---@class "..union.name.."\n")
   end
 
-  ---@param type_concept ApiFilter
-  local function add_type_concept(type_concept)
-    add(convert_description(
-      extend_string{str = type_concept.description, post = "\n\n"}
-        -- HACK: this only applies to Filters which is the only type of concept using this as of v8
-        .."**Editors Note:** This description is lacking. Refer to the html docs (link below).\n\n"
-        ..view_documentation(type_concept.name)
-    ))
-    add("---@class "..type_concept.name.."\n")
+  ---@param filter ApiFilter
+  local function add_filter(filter)
+    add_table_type(add, filter, filter.name, view_documentation(filter.name), "Applies to filter")
   end
 
   add(file_prefix)
@@ -965,8 +962,8 @@ local function generate_concepts()
       add_table_concept(concept)
     elseif concept.category == "union" then
       add_union(concept)
-    elseif concept.category == "type" then
-      add_type_concept(concept)
+    elseif concept.category == "filter" then
+      add_filter(concept)
     else
       print("Unknown concept category '"..concept.category.."' for concept '"..concept.name.."'.")
       add(convert_description(format_entire_description(concept, view_documentation(concept.name))))
