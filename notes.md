@@ -35,8 +35,6 @@ can a `complex_type` `function` have `ApiComplexType` parameters?
 
 what exactly is going on with the newlines in descriptions now
 
-variadic is still a thing! how did i miss that
-
 just a few more custom types i had to define (5)
 
 note about global definitions and their descriptions

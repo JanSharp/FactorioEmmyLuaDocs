@@ -30,9 +30,11 @@
 ---@field notes string[]|nil
 ---@field examples string[]|nil
 
----@class ApiSubSeeAlso : ApiName
----@field subclasses string[]|nil @ which subclasses this can be used on
+---@class ApiSeeAlso : ApiName
 ---@field see_also string[]|nil @ references to members of other classes
+
+---@class ApiSubSeeAlso : ApiSeeAlso
+---@field subclasses string[]|nil @ which subclasses this can be used on
 
 ---@alias ApiType ApiBasicType|ApiComplexType
 ---@alias ApiBasicType string
@@ -101,79 +103,23 @@
 ---@class ApiOption : ApiDescription
 ---@field type ApiType
 
----@class ApiConceptBase : ApiName
----@field category '"specification"'|'"concept"'|'"struct"'|'"flag"'|'"table"'|'"union"'|'"type"'
+---@class ApiConceptBase : ApiName, ApiNotesAndExamples, ApiSeeAlso
+---@field category '"specification"'|'"concept"'|'"struct"'|'"flag"'|'"table"'|'"union"'|'"filter"'
 
----@class ApiSpecification : ApiConceptBase, ApiNotesAndExamples
+---@class ApiSpecification : ApiConceptBase
 ---@field options ApiOption[]
 
----@class ApiConcept : ApiConceptBase, ApiNotesAndExamples
+---@class ApiConcept : ApiConceptBase
 
----@class ApiStruct : ApiConceptBase
+---@class ApiStruct : ApiConceptBase, ApiSubSeeAlso
 ---@field attributes ApiAttribute[]
 
 ---@class ApiFlag : ApiConceptBase
 ---@field options ApiName[]
 
----@class ApiTableConcept : ApiConceptBase, ApiSubSeeAlso, ApiNotesAndExamples, ApiTableTypeFields
+---@class ApiTableConcept : ApiConceptBase, ApiTableTypeFields
 
----@class ApiUnion : ApiConceptBase, ApiNotesAndExamples
+---@class ApiUnion : ApiConceptBase
 ---@field options ApiName[]
 
----@class ApiTypeConcept : ApiConceptBase
-
---[[
-
--- this was temporarily used becuase null fields were missing in v8 unintionally
-
-{
-  concept = {
-    examples = "table",
-    notes = "table"
-  },
-  flag = {
-    options = "table"
-  },
-  specification = {
-    examples = "table",
-    options = "table"
-  },
-  struct = {
-    attributes = "table"
-  },
-  table = {
-    examples = "table",
-    notes = "table",
-    parameters = "table",
-    see_also = "table",
-    variant_parameter_description = "string",
-    variant_parameter_groups = "table"
-  },
-  type = {},
-  union = {
-    notes = "table",
-    options = "table"
-  }
-}
-
-generated with this (vv) in main.lua
-
-```lua
-local categories = {}
-for _, concept in ipairs(runtime_api_data.concepts) do
-  local c = categories[concept.category]
-  if not c then c = {} categories[concept.category] = c end
-  for k, v in next, concept do
-    c[k] = type(v)
-  end
-end
-for _, category in next, categories do
-  category.category = nil
-  category.name = nil
-  category.order = nil
-  category.description = nil
-end
-print(serpent.block(categories, {comment = false, sort_keys = true}))
-```
-
-]]
+---@class ApiFilter : ApiConceptBase, ApiTableTypeFields

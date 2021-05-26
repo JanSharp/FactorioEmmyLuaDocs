@@ -106,6 +106,25 @@ local function extend_string(param)
   end
 end
 
+---behaves like table.concat, except the separator is the first param
+---and it treats empty strings as nil
+---@param sep string
+---@param t string[]
+---@return string
+local function special_concat(sep, t)
+  local shift = 0
+  for i = 1, #t do
+    local str = t[i]
+    t[i] = nil
+    if str == "" then
+      shift = 1
+    else
+      t[i - shift] = str ---@type string
+    end
+  end
+  return table.concat(t, sep)
+end
+
 local format_type
 
 ---requires data to be set already
@@ -296,41 +315,37 @@ local function convert_param_or_return_description(description)
   end
 end
 
----May also take an ApiSubSeeAlso as a single parameter
----@param description string
----@param subclasses string[]|nil @ which subclasses this can be used on
----@param see_also string[]|nil @ references to members of other classes
-local function convert_description_sub_see_also(description, subclasses, see_also)
-  if type(description) == "table" then
-    local sub_see_also = description ---@type ApiSubSeeAlso
-    description = sub_see_also.description
-    subclasses = sub_see_also.subclasses
-    see_also = sub_see_also.see_also
-  end
-
-  local result = {empty_to_nil(description)}
-
+---@param subclasses? string[]
+---@return string
+local function format_subclasses(subclasses)
   if subclasses then
     local length = #subclasses
     local last = subclasses[length]
     subclasses[length] = nil
-    result[#result+1] = "_Can only be used if this is "
+    local result = "_Can only be used if this is "
       ..table.concat(subclasses, ", ")
-      ..(length > 1 and "or " or "")
+      ..(length > 1 and " or " or "")
       ..last
       .."_"
     subclasses[length] = last -- do not leave the table modified
+    return result
+  else
+    return ""
   end
+end
 
+---@param see_also? string[]
+---@return string
+local function format_see_also(see_also)
   if see_also then
-    result[#result+1] = "### See also\n"
+    return "### See also\n"
       ---@param ref string
       ..table.concat(linq.select(see_also, function(ref)
         return "- "..resolve_internal_reference(ref)
       end), "\n")
+  else
+    return ""
   end
-
-  return convert_description(table.concat(result, "\n\n"))
 end
 
 ---@param notes? string[]
@@ -355,14 +370,19 @@ local function format_examples(examples)
   end), "\n\n")
 end
 
----formates notes + view_documentation_link + examples in that order
+---@class format_entire_description_obj : ApiSubSeeAlso, ApiNotesAndExamples
+
+---formats description, subclasses, see_also, notes, examples
+---@param obj format_entire_description_obj
 ---@param view_documentation_link string
----@param notes_and_examples ApiNotesAndExamples
----@return string
-local function format_notes_and_examples(view_documentation_link, notes_and_examples)
-  return extend_string{str = format_notes(notes_and_examples.notes), post = "\n\n"}
-    ..view_documentation_link
-    ..extend_string{pre = "\n\n", str = format_examples(notes_and_examples.examples)}
+---@param description? string @ Default: obj.description
+local function format_entire_description(obj, view_documentation_link, description)
+  return extend_string{str = description or obj.description, post = "\n\n"}
+  ..extend_string{str = format_notes(obj.notes), post = "\n\n"}
+  ..view_documentation_link
+  ..extend_string{pre = "\n\n", str = format_examples(obj.examples)}
+  ..extend_string{pre = "\n\n", str = format_subclasses(obj.subclasses)}
+  ..extend_string{pre = "\n\n", str = format_see_also(obj.see_also)}
 end
 
 local escaped_keyword_map = {} ---@type table<string, string>
@@ -616,19 +636,16 @@ local function generate_events()
   end
   add(file_prefix)
   for _, event in ipairs(data.events) do
-    add(convert_description(
-      extend_string{str = event.description, post = "\n\n"}
-        ..format_notes_and_examples(view_documentation(event.name), event)
-    ))
+    local view_documentation_link = view_documentation(event.name)
+    add(convert_description(format_entire_description(event, view_documentation_link)))
     add("---@class "..event.name.."\n")
     for _, param in ipairs(event.data) do
-      local view_doc_link = view_documentation(event.name)
       add(convert_description(
         extend_string{str = param.description, post = "\n\n"}
-          ..view_doc_link
+          ..view_documentation_link
       ))
       add("---@field "..param.name.." "..format_type(param.type, function()
-        return event.name.."."..param.name, view_doc_link
+        return event.name.."."..param.name, view_documentation_link
       end))
       add((param.optional and "|nil" or "").."\n")
     end
@@ -654,15 +671,12 @@ local function add_class(add, class, is_struct)
   local function add_attribute(attribute)
     ---@diagnostic disable-next-line: undefined-field
     local view_doc_link = view_documentation(class.name.."::"..(attribute.html_doc_name or attribute.name))
-    add(convert_description_sub_see_also(
+    add(convert_description(format_entire_description(
+      attribute,
+      view_doc_link,
       "["..(attribute.read and "R" or "")..(attribute.write and "W" or "").."]"
-      ..extend_string{pre = "\n", str = attribute.description}
-      .."\n\n"
-      ..format_notes_and_examples(view_doc_link, attribute),
-
-      attribute.subclasses,
-      attribute.see_also
-    ))
+        ..extend_string{pre = "\n", str = attribute.description}
+    )))
     add("---@field "..attribute.name.." "..format_type(attribute.type, function()
       return class.name.."."..attribute.name, view_doc_link
     end).."\n")
@@ -713,12 +727,7 @@ local function add_class(add, class, is_struct)
 
   ---@param method ApiMethod
   local function convert_description_for_method(method)
-    return convert_description_sub_see_also(
-      extend_string{str = method.description, post = "\n\n"}
-        ..format_notes_and_examples(view_documentation_for_method(method), method),
-      method.subclasses,
-      method.see_also
-    )
+    return convert_description(format_entire_description(method, view_documentation_for_method(method)))
   end
 
 
@@ -771,26 +780,18 @@ local function add_class(add, class, is_struct)
 
 
 
-  local global_description = extend_string{
-    pre = "**Global Description:**\n",
-    str = try_get_global_description(class.name),
-    post = "\n\n",
-  }
-  add(convert_description_sub_see_also(
+  local needs_label = class.description ~= "" or class.notes ~= ""
+  add(convert_description(format_entire_description(
+    class,
+    view_documentation(class.name),
     extend_string{
-      pre = extend_string{
-        str = global_description,
-        post = "**Class Description:**\n",
-      },
-      str = extend_string{str = class.description, post = "\n\n"}
-        ..extend_string{str = format_notes(class.notes), post = "\n\n"},
-      fallback = global_description,
+      pre = "**Global Description:**\n",
+      str = try_get_global_description(class.name),
+      post = (needs_label and "\n\n**Class Description:**\n" or "\n\n")
+        ..class.description,
+      fallback = class.description,
     }
-      ..view_documentation(class.name)
-      ..extend_string{pre = "\n\n", str = format_examples(class.examples)},
-    class.subclasses,
-    class.see_also
-  ))
+  )))
   add("---@class "..class.name..convert_base_classes(class.base_classes).."\n")
 
   if not is_struct then
@@ -867,7 +868,9 @@ local function generate_concepts()
     local function get_table_name_and_view_doc_link(option)
       return specification.name.."."..(option.order + 1), view_documentation_link
     end
-    add(convert_description(
+    add(convert_description(format_entire_description(
+      specification,
+      view_documentation_link,
       extend_string{str = specification.description, post = "\n\n"}
         .."May be specified in one of the following ways:"
         ---@param option ApiOption
@@ -878,9 +881,7 @@ local function generate_concepts()
             end, true)
             ..extend_string{pre = ": ", str = option.description}
         end))
-        .."\n\n"
-        ..format_notes_and_examples(view_documentation_link, specification)
-    ))
+    )))
     add("---@class "..specification.name..":")
     ---@param option ApiOption
     add(table.concat(linq.select(sorted_options, function(option)
@@ -893,10 +894,7 @@ local function generate_concepts()
 
   ---@param concept ApiConcept
   local function add_concept(concept)
-    add(convert_description(
-      extend_string{str = concept.description, post = "\n\n"}
-        ..format_notes_and_examples(view_documentation(concept.name), concept)
-    ))
+    add(convert_description(format_entire_description(concept, view_documentation(concept.name))))
     add("---@class "..concept.name.."\n")
   end
 
@@ -908,10 +906,7 @@ local function generate_concepts()
   ---@param flag ApiFlag
   local function add_flag(flag)
     local view_documentation_link = view_documentation(flag.name)
-    add(convert_description(
-      extend_string{str = flag.description, post = "\n\n"}
-        ..view_documentation_link
-    ))
+    add(convert_description(format_entire_description(flag, view_documentation_link)))
     add("---@class "..flag.name.."\n")
     for _, option in ipairs(flag.options) do
       add(convert_description(
@@ -929,20 +924,22 @@ local function generate_concepts()
 
   ---@param union ApiUnion
   local function add_union(union)
-    add(convert_description(
-      extend_string{str = union.description, post = "\n\n"}
-        .."Possible values are:"
-        ---@param option ApiName
-        ..table.concat(linq.select(sort_by_order(union.options), function(option)
-          return "\n- \""..option.name.."\""..extend_string{pre = " - ", str = option.description}
-        end))
-        .."\n\n"
-        ..format_notes_and_examples(view_documentation(union.name), union)
-    ))
+    add(convert_description(format_entire_description(
+      union,
+      view_documentation(union.name),
+      special_concat("\n\n", {
+        union.description,
+        "Possible values are:"
+          ---@param option ApiName
+          ..table.concat(linq.select(sort_by_order(union.options), function(option)
+            return "\n- \""..option.name.."\""..extend_string{pre = " - ", str = option.description}
+          end))
+      })
+    )))
     add("---@class "..union.name.."\n")
   end
 
-  ---@param type_concept ApiTypeConcept
+  ---@param type_concept ApiFilter
   local function add_type_concept(type_concept)
     add(convert_description(
       extend_string{str = type_concept.description, post = "\n\n"}
@@ -972,7 +969,7 @@ local function generate_concepts()
       add_type_concept(concept)
     else
       print("Unknown concept category '"..concept.category.."' for concept '"..concept.name.."'.")
-      add(convert_description(view_documentation(concept.name)))
+      add(convert_description(format_entire_description(concept, view_documentation(concept.name))))
       add("---@class "..concept.name.."\n")
     end
   end
