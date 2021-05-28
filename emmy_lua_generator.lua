@@ -7,6 +7,32 @@ local linq = require("linq")
 
 local lua_keywords = require("lua_keywords")
 
+-- naming conventions in this file and some general info
+
+-- adding means adding to the output, which will be a file
+
+-- converted means final format that will be written to the output file
+-- this is mostly/only relevant for descriptions which will have `---` at the start
+-- of each line, 2 leading spaces for line breaks that shouldn't create new paragraphs
+-- and at least double \n\n for new paragraphs
+-- internal references are resolved html doc links
+
+-- formatted is an intermediate state only really used for descriptions
+-- which means this is basically raw markdown
+-- "resolve" is also used for this for internal references and links
+-- linebreaks that shouldn't cause new paragraphs are single \n
+-- new paragraphs are 2 or more
+-- internal references look like `[display name](internal_reference_name)` like `[game](LuaGameScript)`
+-- see `resolve_internal_reference` for more detail
+
+-- extend_string is almost like a core building block for building descriptions
+
+-- no description is always "" unless it is completely unused description, then it's nil
+-- like return_description is only not nil if there is a return type
+-- this convention of "" meaing "no description" applies everywhere in here
+
+
+-- all of these get set/populated in or through the generate function
 local args ---@type Args
 local data ---@type ApiFormat
 ---indexed by formatted types
@@ -372,7 +398,10 @@ end
 
 ---@class format_entire_description_obj : ApiSubSeeAlso, ApiNotesAndExamples
 
----formats description, subclasses, see_also, notes, examples
+---formats description, subclasses, see_also, notes, examples\
+---even if the given object type can't even have all of these\
+---initially i wrote all of these manually for every time only using whatever the type
+---actually had, which tbh was just dumb.
 ---@param obj format_entire_description_obj
 ---@param view_documentation_link string
 ---@param description? string @ Default: obj.description
