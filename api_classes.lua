@@ -97,13 +97,13 @@
 ---@field values ApiName[]|nil
 ---@field subkeys ApiDefine[]|nil
 
----@class ApiEvent : ApiName, ApiNotesAndExamples
+---@class ApiEvent : ApiNotesAndExamples
 ---@field data ApiParameter[]
 
 ---@class ApiOption : ApiDescription
 ---@field type ApiType
 
----@class ApiConceptBase : ApiName, ApiNotesAndExamples, ApiSeeAlso
+---@class ApiConceptBase : ApiNotesAndExamples, ApiSeeAlso
 ---@field category '"specification"'|'"concept"'|'"struct"'|'"flag"'|'"table"'|'"union"'|'"filter"'
 
 ---@class ApiSpecification : ApiConceptBase

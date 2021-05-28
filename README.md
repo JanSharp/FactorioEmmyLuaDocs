@@ -1,11 +1,4 @@
 
-# Private Repo
-
-For the duration of this repo being private and you who is reading this being
-a collaborator i (as a user account) don't have the ability to disallow you to
-push to the repo, however i would ask you to basically treat it as if it was a
-public repo and you weren't a collaborator. Thank you!
-
 # running the script
 
 Put the source data file in `source_data/runtime-api.json`.
