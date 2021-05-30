@@ -43,7 +43,7 @@
 ---@field key ApiType|nil @ used for "dictionary"|"LuaCustomTable"
 ---@field value ApiType|nil @ used for "array"|"dictionary"|"LuaCustomTable"|"LuaLazyLoadedValue"
 ---@field options ApiType[]|nil @ used for "variant"
----@field parameters string[]|nil @ used for "function"
+---@field parameters ApiType[]|nil @ used for "function"
 
 ---@class ApiClass : ApiSubSeeAlso, ApiNotesAndExamples
 ---@field methods ApiMethod[]

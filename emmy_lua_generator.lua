@@ -582,13 +582,20 @@ do
           ..","..format_type(api_type.value, modify_getter("_value"))..">"
       elseif api_type.complex_type == "table" then
         local table_class_name, view_documentation_link = get_table_name_and_view_doc_link()
-        if not complex_table_type_name_lut[table_class_name] then -- only add each type once
+        if complex_table_type_name_lut[table_class_name] then -- has it already been generated?
+          return table_class_name
+        else
           complex_table_type_name_lut[table_class_name] = true
           return add_table_type(add, api_type, table_class_name, view_documentation_link)
         end
       elseif api_type.complex_type == "function" then
+        local i = 0
         ---@param v string
-        return "fun("..table.concat(linq.select(api_type.parameters, function(v) return to_id(v)..":"..to_id(v) end), ",")..")"
+        return "fun("..table.concat(linq.select(api_type.parameters, function(v)
+          i = i + 1
+          local formatted_type = format_type(v, modify_getter("_param"..i))
+          return "param"..i..":"..formatted_type
+        end), ",")..")"
       else
         print("Unable to convert complex type `"..api_type.complex_type.."` "..serpent.line(api_type, {comment = false})..".")
         return api_type.complex_type
