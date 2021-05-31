@@ -164,7 +164,7 @@ local function populate_luts_and_maps()
   concept_name_lut = linq.to_dict(data.concepts, name_selector)
   builtin_type_name_lut = linq.to_dict(data.builtin_types, name_selector)
 
-  globals_map = linq.to_dict(data.global_classes, function(g)
+  globals_map = linq.to_dict(data.global_objects, function(g)
     return format_type(g.type, function()
       print("Complex table type is not supported for global variable `"..g.name.."`.")
       return "not_supported", "not_supported"
@@ -1054,7 +1054,7 @@ local function generate(_args, _data)
   populate_luts_and_maps()
   valid_target_files = {}
   -- HACK: api_version "???" treated as "latest"
-  runtime_api_base_url = "https://lua-api.factorio.com/"..(data.api_version == "???" and "latest" or data.api_version).."/"
+  runtime_api_base_url = "https://lua-api.factorio.com/"..(data.application_version == "???" and "latest" or data.application_version).."/"
   generate_builtin()
   generate_defines()
   generate_events()

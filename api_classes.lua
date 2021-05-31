@@ -3,14 +3,14 @@
 ---@class ApiFormat
 ---@field application '"factorio"'
 ---@field stage '"runtime"'
----@field api_version string
----@field api_format_version number
+---@field application_version string
+---@field api_version number
 ---@field classes ApiClass[]
 ---@field defines ApiDefine[]
 ---@field events ApiEvent[]
 ---@field concepts ApiConceptBase[]
 ---@field builtin_types ApiBuiltinType[]
----@field global_classes ApiGlobalVariable[]
+---@field global_objects ApiGlobalVariable[]
 
 ---@class ApiBuiltinType : ApiName
 
