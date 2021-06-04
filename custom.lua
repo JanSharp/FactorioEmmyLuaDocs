@@ -7,9 +7,6 @@
 ---LuaGuiElement.add param field elem_filters
 ---@class PrototypeFilter
 
----LuaRemote.call param ...
----@class variadic
-
 ---BlueprintEntity.connections
 ---@class BlueprintCircuitConnection
 

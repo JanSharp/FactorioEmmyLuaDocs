@@ -751,20 +751,23 @@ local function add_class(add, class, is_struct)
     return view_documentation(class.name.."::"..(method.html_doc_name or method.name))
   end
 
-  ---@param parameter ApiParameter
   ---@param method ApiMethod
-  local function add_vararg_annotation(parameter, method)
-    add("---@vararg "..format_type(parameter.type, function()
-      return class.name.."."..method.name.."_vararg", view_documentation_for_method(method)
-    end).."\n")
-    if parameter.description ~= "" then
-      local description = "\n**vararg**:"
-      if is_single_line(parameter.description) then
-        description = description.." "..parameter.description
-      else
-        description = description.."\n\n"..parameter.description
+  local function add_vararg_annotation(method)
+    local vararg_type = method.variadic_type
+    if vararg_type then
+      local vararg_description = method.variadic_description
+      add("---@vararg "..format_type(vararg_type, function()
+        return class.name.."."..method.name.."_vararg", view_documentation_for_method(method)
+      end).."\n")
+      if vararg_description ~= "" then
+        local description = "\n**vararg**:"
+        if is_single_line(vararg_description) then
+          description = description.." "..vararg_description
+        else
+          description = description.."\n\n"..vararg_description
+        end
+        add(convert_description(description))
       end
-      add(convert_description(description))
     end
   end
 
@@ -801,12 +804,9 @@ local function add_class(add, class, is_struct)
     ---@type ApiParameter[]
     local sorted_parameters = sort_by_order(method.parameters)
     for _, parameter in ipairs(sorted_parameters) do
-      if parameter.name == "..." then
-        add_vararg_annotation(parameter)
-      else
-        add_param_annontation(parameter)
-      end
+      add_param_annontation(parameter)
     end
+    add_vararg_annotation(method)
     add_return_annotation(method)
 
     ---@param parameter ApiParameter
@@ -815,6 +815,10 @@ local function add_class(add, class, is_struct)
     end)
 
     add(method.name.."=function(")
+    if method.variadic_type then
+      -- name_list isn't the original table, so no need to worry modifying it
+      name_list[#name_list+1] = "..."
+    end
     add(table.concat(name_list, ","))
     add(")end,\n")
   end

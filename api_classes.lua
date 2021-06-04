@@ -82,6 +82,8 @@
 ---@field return_type ApiType|nil
 ---return_type and return_description are either both `nil` or both not `nil`
 ---@field return_description string|nil
+---@field variadic_type ApiType|nil
+---@field variadic_description string|nil
 
 ---@class ApiMethodOperator : ApiOperator, ApiMethod
 
