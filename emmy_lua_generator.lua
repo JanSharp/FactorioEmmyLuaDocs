@@ -42,6 +42,7 @@ local event_name_lut ---@type table<string, boolean>
 local define_name_lut ---@type table<string, boolean>
 local builtin_type_name_lut ---@type table<string, boolean>
 local concept_name_lut ---@type table<string, boolean>
+local table_or_array_type_name_lut ---@type table<string, ApiType>
 local valid_target_files ---@type table<string, boolean>
 local runtime_api_base_url ---@type string
 
@@ -162,6 +163,14 @@ local function populate_luts_and_maps()
   class_name_lut = linq.to_dict(data.classes, name_selector)
   event_name_lut = linq.to_dict(data.events, name_selector)
   concept_name_lut = linq.to_dict(data.concepts, name_selector)
+  table_or_array_type_name_lut = linq.to_dict(
+    linq.where(data.concepts, function(v)
+      return v.category == "table_or_array"
+    end),
+    name_selector,
+    function(v) ---@type ApiTableOrArrayConcept
+      return sort_by_order(v.parameters)[1].type
+    end)
   builtin_type_name_lut = linq.to_dict(data.builtin_types, name_selector)
 
   globals_map = linq.to_dict(data.global_objects, function(g)
@@ -555,7 +564,20 @@ do
     end
     if type(api_type) == "string" then
       ---@narrow api_type string
-      return wrap(api_type)
+      local table_or_array_elem_type = table_or_array_type_name_lut[api_type]
+      if table_or_array_elem_type then
+        -- use format_type just in case it's a complex type or another `table_or_array`
+        local value_type = format_type(table_or_array_elem_type, function()
+          return api_type.."_elem", view_documentation(api_type)
+        end, add_doc_links)
+        return wrap(api_type).."<"..wrap("int")..","..value_type..">"
+        -- this makes sumneko.lua think it's both the `api_type` and
+        -- `table<int,value_type>` where `value_type` is the type of the first
+        -- "parameter" (field) for the `table_or_array` concept
+        -- it's hacks all the way
+      else
+        return wrap(api_type)
+      end
     else
       ---@narrow api_type ApiComplexType
       if api_type.complex_type == "array" then
@@ -963,6 +985,11 @@ local function generate_concepts()
     add_table_type(add, table_concept, table_concept.name, view_documentation(table_concept.name))
   end
 
+  ---@param table_or_array_concept ApiTableConcept
+  local function add_table_or_array_concept(table_or_array_concept)
+    add_table_type(add, table_or_array_concept, table_or_array_concept.name, view_documentation(table_or_array_concept.name))
+  end
+
   ---@param union ApiUnion
   local function add_union(union)
     add(convert_description(format_entire_description(
@@ -998,6 +1025,8 @@ local function generate_concepts()
       add_flag(concept)
     elseif concept.category == "table" then
       add_table_concept(concept)
+    elseif concept.category == "table_or_array" then
+      add_table_or_array_concept(concept)
     elseif concept.category == "union" then
       add_union(concept)
     elseif concept.category == "filter" then

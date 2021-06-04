@@ -12,6 +12,23 @@ local function select(t, selector)
   return result
 end
 
+---@generic T
+---@param t T[]
+---@param condition fun(T: any): any
+local function where(t, condition)
+  local result = {}
+  local c = 0
+  ---@diagnostic disable:no-implicit-any
+  for _, v in ipairs(t) do
+    if condition(v) then
+      c = c + 1
+      result[c] = v
+    end
+  end
+  ---@diagnostic enable:no-implicit-any
+  return result
+end
+
 ---@generic V, RK, RV
 ---@param t V[]
 ---@param key_selector fun(value: V): RK
@@ -48,6 +65,7 @@ end
 
 return {
   select = select,
+  where = where,
   to_dict = to_dict,
   copy = copy,
 }
