@@ -8,6 +8,7 @@ local Path = require("path")
 ---@field target_dir_path Path
 ---@field debug_runtime_api_json_crc number|nil
 ---@field disable_specific_diagnostics string[]
+---@field factorio_version string @ format: `major.minor.patch`
 
 ---@param arg string[]
 ---@return Args
@@ -76,6 +77,7 @@ local function get_args(arg)
   single("cache_dir")
   single("target_dir")
   single("debug_runtime_api_json_crc")
+  single("factorio_version")
 
   args.source_path = Path.new(args.source_file)
   args.source_file = nil

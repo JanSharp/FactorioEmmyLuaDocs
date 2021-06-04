@@ -11,8 +11,9 @@
         "--source-file", "source_data/runtime-api.json",
         "--target-dir", "output",
         "--cache-dir", "cache",
-        "--debug-runtime-api-json-crc", "1032792611.0",
+        "--debug-runtime-api-json-crc", "1876337710.0",
         "--disable-specific-diagnostics", "trailing-space",
+        "--factorio-version", "1.1.34",
       ],
     },
   ]

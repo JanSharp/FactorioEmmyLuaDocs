@@ -902,17 +902,17 @@ local function generate_concepts()
     result[c] = part
   end
 
-  ---@param specification ApiSpecification
-  local function add_specification(specification)
-    local view_documentation_link = view_documentation(specification.name)
-    local sorted_options = sort_by_order(specification.options)
+  ---@param identification ApiIdentification
+  local function add_identification(identification)
+    local view_documentation_link = view_documentation(identification.name)
+    local sorted_options = sort_by_order(identification.options)
     local function get_table_name_and_view_doc_link(option)
-      return specification.name.."."..(option.order + 1), view_documentation_link
+      return identification.name.."."..(option.order + 1), view_documentation_link
     end
     add(convert_description(format_entire_description(
-      specification,
+      identification,
       view_documentation_link,
-      extend_string{str = specification.description, post = "\n\n"}
+      extend_string{str = identification.description, post = "\n\n"}
         .."May be specified in one of the following ways:"
         ---@param option ApiOption
         ..table.concat(linq.select(sorted_options, function(option)
@@ -923,7 +923,7 @@ local function generate_concepts()
             ..extend_string{pre = ": ", str = option.description}
         end))
     )))
-    add("---@class "..specification.name..":")
+    add("---@class "..identification.name..":")
     ---@param option ApiOption
     add(table.concat(linq.select(sorted_options, function(option)
       return format_type(option.type, function()
@@ -988,8 +988,8 @@ local function generate_concepts()
   add(file_prefix)
 
   for _, concept in ipairs(data.concepts) do
-    if concept.category == "specification" then
-      add_specification(concept)
+    if concept.category == "identification" then
+      add_identification(concept)
     elseif concept.category == "concept" then
       add_concept(concept)
     elseif concept.category == "struct" then
@@ -1053,8 +1053,7 @@ local function generate(_args, _data)
   data = _data
   populate_luts_and_maps()
   valid_target_files = {}
-  -- HACK: api_version "???" treated as "latest"
-  runtime_api_base_url = "https://lua-api.factorio.com/"..(data.application_version == "???" and "latest" or data.application_version).."/"
+  runtime_api_base_url = "https://lua-api.factorio.com/"..(args.factorio_version or "latest").."/"
   generate_builtin()
   generate_defines()
   generate_events()

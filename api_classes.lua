@@ -104,9 +104,9 @@
 ---@field type ApiType
 
 ---@class ApiConceptBase : ApiNotesAndExamples, ApiSeeAlso
----@field category '"specification"'|'"concept"'|'"struct"'|'"flag"'|'"table"'|'"union"'|'"filter"'
+---@field category '"identification"'|'"concept"'|'"struct"'|'"flag"'|'"table"'|'"table_or_array"'|'"union"'|'"filter"'
 
----@class ApiSpecification : ApiConceptBase
+---@class ApiIdentification : ApiConceptBase
 ---@field options ApiOption[]
 
 ---@class ApiConcept : ApiConceptBase
@@ -118,6 +118,8 @@
 ---@field options ApiName[]
 
 ---@class ApiTableConcept : ApiConceptBase, ApiTableTypeFields
+
+---@class ApiTableOrArrayConcept : ApiConceptBase, ApiTableTypeFields
 
 ---@class ApiUnion : ApiConceptBase
 ---@field options ApiName[]
