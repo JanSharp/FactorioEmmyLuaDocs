@@ -1086,6 +1086,7 @@ local function generate(_args, _data)
   data = _data
   populate_luts_and_maps()
   valid_target_files = {}
+  -- HACK: data.application_version is going to replace factorio_version in the future
   runtime_api_base_url = "https://lua-api.factorio.com/"..(args.factorio_version or "latest").."/"
   generate_builtin()
   generate_defines()
