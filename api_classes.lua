@@ -108,7 +108,7 @@
 ---@class ApiConceptBase : ApiNotesAndExamples, ApiSeeAlso
 ---@field category '"identification"'|'"concept"'|'"struct"'|'"flag"'|'"table"'|'"table_or_array"'|'"union"'|'"filter"'
 
----@class ApiIdentification : ApiConceptBase
+---@class ApiUnion : ApiConceptBase
 ---@field options ApiOption[]
 
 ---@class ApiConcept : ApiConceptBase
@@ -123,7 +123,7 @@
 
 ---@class ApiTableOrArrayConcept : ApiConceptBase, ApiTableTypeFields
 
----@class ApiUnion : ApiConceptBase
+---@class ApiEnum : ApiConceptBase
 ---@field options ApiName[]
 
 ---@class ApiFilter : ApiConceptBase, ApiTableTypeFields

@@ -928,17 +928,17 @@ local function generate_concepts()
     result[c] = part
   end
 
-  ---@param identification ApiIdentification
-  local function add_identification(identification)
-    local view_documentation_link = view_documentation(identification.name)
-    local sorted_options = sort_by_order(identification.options)
+  ---@param union ApiUnion
+  local function add_union(union)
+    local view_documentation_link = view_documentation(union.name)
+    local sorted_options = sort_by_order(union.options)
     local function get_table_name_and_view_doc_link(option)
-      return identification.name.."."..(option.order + 1), view_documentation_link
+      return union.name.."."..(option.order + 1), view_documentation_link
     end
     add(convert_description(format_entire_description(
-      identification,
+      union,
       view_documentation_link,
-      extend_string{str = identification.description, post = "\n\n"}
+      extend_string{str = union.description, post = "\n\n"}
         .."May be specified in one of the following ways:"
         ---@param option ApiOption
         ..table.concat(linq.select(sorted_options, function(option)
@@ -949,7 +949,7 @@ local function generate_concepts()
             ..extend_string{pre = ": ", str = option.description}
         end))
     )))
-    add("---@class "..identification.name..":")
+    add("---@class "..union.name..":")
     ---@param option ApiOption
     add(table.concat(linq.select(sorted_options, function(option)
       return format_type(option.type, function()
@@ -994,21 +994,21 @@ local function generate_concepts()
     add_table_type(add, table_or_array_concept, table_or_array_concept.name, view_documentation(table_or_array_concept.name))
   end
 
-  ---@param union ApiUnion
-  local function add_union(union)
+  ---@param enum ApiEnum
+  local function add_enum(enum)
     add(convert_description(format_entire_description(
-      union,
-      view_documentation(union.name),
+      enum,
+      view_documentation(enum.name),
       special_concat("\n\n", {
-        union.description,
+        enum.description,
         "Possible values are:"
           ---@param option ApiName
-          ..table.concat(linq.select(sort_by_order(union.options), function(option)
+          ..table.concat(linq.select(sort_by_order(enum.options), function(option)
             return "\n- \""..option.name.."\""..extend_string{pre = " - ", str = option.description}
           end))
       })
     )))
-    add("---@class "..union.name.."\n")
+    add("---@class "..enum.name.."\n")
   end
 
   ---@param filter ApiFilter
@@ -1019,8 +1019,8 @@ local function generate_concepts()
   add(file_prefix)
 
   for _, concept in ipairs(data.concepts) do
-    if concept.category == "identification" then
-      add_identification(concept)
+    if concept.category == "union" then
+      add_union(concept)
     elseif concept.category == "concept" then
       add_concept(concept)
     elseif concept.category == "struct" then
@@ -1031,8 +1031,8 @@ local function generate_concepts()
       add_table_concept(concept)
     elseif concept.category == "table_or_array" then
       add_table_or_array_concept(concept)
-    elseif concept.category == "union" then
-      add_union(concept)
+    elseif concept.category == "enum" then
+      add_enum(concept)
     elseif concept.category == "filter" then
       add_filter(concept)
     else
@@ -1086,8 +1086,7 @@ local function generate(_args, _data)
   data = _data
   populate_luts_and_maps()
   valid_target_files = {}
-  -- HACK: data.application_version is going to replace factorio_version in the future
-  runtime_api_base_url = "https://lua-api.factorio.com/"..(args.factorio_version or "latest").."/"
+  runtime_api_base_url = "https://lua-api.factorio.com/"..args.factorio_version.."/"
   generate_builtin()
   generate_defines()
   generate_events()

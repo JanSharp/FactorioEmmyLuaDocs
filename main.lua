@@ -45,11 +45,4 @@ if not runtime_api_data then
   end
 end
 
--- HACK: default filter concept descriptions to ""
-for _, concept in ipairs(runtime_api_data.concepts) do
-  if concept.category == "filter" then
-    concept.description = concept.description or ""
-  end
-end
-
 generator.generate(args, runtime_api_data)
