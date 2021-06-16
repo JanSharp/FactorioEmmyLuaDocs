@@ -31,11 +31,7 @@ not quite sure, but i don't think it really benefits much to have the entire lis
 be part of the machine readable format or the html docs at all, because the entire
 point is to be able to use the prototype hirachy without knowing what it actually is.
 
-can a `complex_type` `function` have `ApiComplexType` parameters?
-
-what exactly is going on with the newlines in descriptions now
-
-just a few more custom types i had to define (5)
+just a few more custom types i had to define (4)
 
 note about global definitions and their descriptions
 --[[
