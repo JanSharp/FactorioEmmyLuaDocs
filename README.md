@@ -1,5 +1,16 @@
 
+# Deprecated
+
+justarandomgeek has basically absorbed this repo/project into the vscode debug extension
+by rewriting it in TS and he'll be keeping that up to date now (probably). Regardless, i'm
+most likely not going to make further changes to this repo but who knows maybe i will. Though
+i don't really need to because this is done. It would just need to be kept up to date with future
+versions of the machine readable api.
+
 # running the script
+
+Since this ships with windows binaries for Lua and lfs you can just follow the steps below.
+On other platforms, uh, have fun getting Lua binaries. lfs (lua file system) is on luarocks btw.
 
 Put the source data file in `source_data/runtime-api.json`.
 Then run this in the root directory of the project:
