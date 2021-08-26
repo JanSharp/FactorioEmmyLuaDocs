@@ -1,4 +1,5 @@
 {
+  "Lua.runtime.plugin": ".vscode/lua/plugin.lua",
   "Lua.diagnostics.disable": [
     "lowercase-global",
   ],
